@@ -1,5 +1,7 @@
 DIRS  = 
 DIRS += ./ecloud
+DIRS += ./monitor
+DIRS += ./mcmillan
 #DIRS += ./intsystem
 #DIRS += ./laserstripping
 #DIRS += ./H0starkeffect
