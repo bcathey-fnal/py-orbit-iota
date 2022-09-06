@@ -483,6 +483,22 @@ extern "C"
         return Py_None;
     }
 
+    // Zero length linear dipole edge transport
+    static PyObject* wrap_dipedge(PyObject *self, PyObject *args)
+    {
+        PyObject* pyBunch;
+        double h, e1, fint, hgap;
+        if(!PyArg_ParseTuple(   args, "Odddd:dipedge",
+                             &pyBunch, &h, &e1, &fint, &hgap))
+        {
+            error("teapotbase - bend1 - cannot parse arguments!");
+        }
+        Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object *) pyBunch)->cpp_obj;
+        teapot_base::dipedge(cpp_bunch, h, e1, fint, hgap);
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
     static PyMethodDef teapotbaseMethods[] =
     {
 			{"rotatexy",         wrap_rotatexy,       METH_VARARGS, "Rotates bunch around z axis "},
@@ -510,6 +526,7 @@ extern "C"
 			{"soln",             wrap_soln,           METH_VARARGS, "Integration through a solenoid "},
 			{"wedgebendCF",      wrap_wedgebendCF,    METH_VARARGS, "Straight bends particles through wedge for Combined Function non-SBEND "},
 			{"RingRF",           wrap_RingRF,         METH_VARARGS, "Tracking particles through a simple ring RF cavity."},
+            {"dipedge",          wrap_dipedge,        METH_VARARGS, "Zero length linear dipole edge transport."},
 			{ NULL, NULL }
     };
 

@@ -9,6 +9,9 @@ echo "ORBIT installed in $ORBIT_ROOT"
 export ORBIT_ARCH=`uname -s`
 
 # alias python='python2'
+# For MacOS Anaconda Python 2.7 installation
+source ~/opt/anaconda3/etc/profile.d/conda.sh
+conda activate python2
 
 if command_exists python2; then
    PYEX=python2
@@ -36,6 +39,16 @@ echo "Found Python include directory: $PYTHON_ROOT_INC"
 
 export PYTHONPATH=${PYTHONPATH}:${ORBIT_ROOT}/py:${ORBIT_ROOT}/lib
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${ORBIT_ROOT}/lib
+
+#NUMPY_DIR=`$PYEX -c "import numpy; print(numpy.__path__[0])"`
+#NUMPY_DIR_TEST=$NUMPY_DIR/core/include/numpy
+#if [ -f $NUMPY_DIR_TEST/ndarraytypes.h ]
+#    then
+#        export EXTRA_INCLUDE=-I$NUMPY_DIR_TEST
+#        echo "Found numpy include directory: ${NUMPY_DIR_TEST}"
+#    else
+#        echo "Could not find numpy! Some extensions may not work."
+#fi
 
 if command_exists mpirun ; then
    echo "Found mpirun at: `which mpirun`"
