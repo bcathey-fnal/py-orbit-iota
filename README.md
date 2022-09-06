@@ -52,7 +52,7 @@ If you don't want to use standard libraries supplied by your distribution, you c
 
 ## 2. Clone the source code
 ```shell
-git clone https://github.com/PyORBIT-Collaboration/py-orbit.git
+git clone https://github.com/bcathey-fnal/py-orbit-iota.git
 ```
 Your source is now in the *py-orbit* directory.
 ## 3. Setup environment variables
