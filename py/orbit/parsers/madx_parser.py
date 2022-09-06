@@ -352,7 +352,7 @@ class MADX_Parser:
 		self.__init__()
 		
 		str_local = ""
-		aper_warning = 0
+		aper_warning = 0; last_position = 0 # Add a variable for last element position -nilanjan@uchicago.edu 08/18/2021
 
 		self.madxFilePath = os.path.dirname(MADXfileName)
 		fileName = os.path.basename(MADXfileName)
@@ -427,15 +427,17 @@ class MADX_Parser:
 					tokens = str_local.split(",") 
 					elem_name = tokens[0]	# elem name 100% is the first position, otherwise the user did a mistake
 					tmp = tokens[1:]
-					aux = [x.split("at=")[-1] for x in tmp if "at=" in x]				
-					position = eval(aux[0]) 
+					aux = [x.split("at=")[-1] for x in tmp if "at=" in x]
+					# Try to evaluate positions from known variables -nilanjan@uchicago.edu 08/08/2021
+					position = eval(aux[0], globals(), localValDict)
 				else:	
 					tokens = str_local.split(":")
 					elem_name = tokens[0]	
 					tmp_str = "".join(tokens[1:])
 					tmp = tmp_str.split(",") 
 					aux = [x.split("at=")[-1] for x in tmp if "at=" in x]
-					position = eval(aux[0]) 
+					# Try to evaluate positions from known variables -nilanjan@uchicago.edu 08/08/2021
+					position = eval(aux[0], globals(), localValDict) 
 	
 				latt_elem = self._accElemDict[elem_name]
 				# he have the element, let's replace variables in parameters by numerical values here
@@ -458,16 +460,19 @@ class MADX_Parser:
 					latt_aper_entry.addParameter("position", position-length/2.0)
 					latt_aper_exit = self.makeAperture(latt_elem)
 					latt_aper_exit.addParameter("position", position+length/2.0)
-					latt_drift = self.makeDrift(latt_elem,elementRefer)
-					self._sequencelist.append(latt_drift)
+					latt_drift = self.makeDrift(last_position,latt_elem,elementRefer)
+					if latt_drift.getParameter("l") > 1e-9: # Don't put a drift between practically touching elements! -nilanjan@uchicago.edu 08/18/2021
+						self._sequencelist.append(latt_drift)
 					self._sequencelist.append(latt_aper_entry)
 					self._sequencelist.append(latt_elem)
 					self._sequencelist.append(latt_aper_exit)
 					aper_warning = aper_warning + 2
 				else:
-					latt_drift = self.makeDrift(latt_elem,elementRefer)
-					self._sequencelist.append(latt_drift)
+					latt_drift = self.makeDrift(last_position,latt_elem,elementRefer)
+					if latt_drift.getParameter("l") > 1e-9: # Don't put a drift between practically touching elements! -nilanjan@uchicago.edu 08/18/2021
+						self._sequencelist.append(latt_drift)
 					self._sequencelist.append(latt_elem)
+				last_position = position # Register last element position -nilanjan@uchicago.edu 08/18/2021
 
 			if(str_local.rfind("endsequence") >= 0):
 				#If the last element is not at the end of the lattice, make a drift		
@@ -480,8 +485,9 @@ class MADX_Parser:
 					endPos = float(self._sequencelength)
 					lattEnd.addParameter("position", endPos)
 					lattEnd.addParameter("l", 0)
-					latt_drift = self.makeDrift(lattEnd,elementRefer)
-					self._sequencelist.append(latt_drift)
+					latt_drift = self.makeDrift(last_position,lattEnd,elementRefer)
+					if latt_drift.getParameter("l") > 1e-9: # Don't put a drift between practically touching elements! -nilanjan@uchicago.edu 08/18/2021
+						self._sequencelist.append(latt_drift)
 					self._sequencelist.append(lattEnd)
 					
 				endlength = float(self._sequencelength) - (float(self._sequencelist[-1].getParameter("position")) + 0.5*float(self._sequencelist[-1].getParameter("l")))
@@ -615,7 +621,7 @@ class MADX_Parser:
 		
 						
 		
-	def makeDrift(self, downstreamelem,elementRefer):
+	def makeDrift(self, posUp,downstreamelem,elementRefer):
 	
 		# Now we have to create a drift between elements 
 		if elementRefer == "entry":
@@ -635,13 +641,13 @@ class MADX_Parser:
 		lenUp = 0.0 # upstream
 		lenDown = 0.0 # downstream
 		if not self._sequencelist:
-			posUp = 0.0
+			#posUp = 0.0 - Commented out, now a function argument -nilanjan@uchicago.edu 08/18/2021
 			lenDown = downstreamelem.getParameter("l")
 		else:
 			upstreamelem = self._sequencelist[-1]
 			lenUp = upstreamelem.getParameter("l")
 			lenDown = downstreamelem.getParameter("l")
-			posUp = upstreamelem.getParameter("position")
+			#posUp = upstreamelem.getParameter("position") - Commented out, now a function argument -nilanjan@uchicago.edu 08/18/2021
 		posDown = downstreamelem.getParameter("position")
 		driftlength = abs(posDown - posUp) - refer[0]*lenUp -refer[1]*lenDown
 
@@ -651,7 +657,7 @@ class MADX_Parser:
 		if driftlength < 0:
 			print "Warning: Drift between {} and {} has negative length, value = {}".format(upstreamelem.getName(), downstreamelem.getName(),driftlength)
 			print "Setting length to zero."
-			lattElem = MADX_LattElement(name, type_local)
+			lattElem = MADX_LattElement(name, type_local); lattElem.addParameter("l", 0.0) # Spcify 0 length -nilanjan@uchicago.edu 08/30/2021
 		else:
 			lattElem = MADX_LattElement(name, type_local)
 			lattElem.addParameter("l", driftlength)

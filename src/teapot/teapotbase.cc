@@ -1538,4 +1538,50 @@ void RingRF(Bunch* bunch, double ring_length, int harmonic_numb,
     }
 }
 
+// New element added - nilanjan@uchicago.edu, 10/18/21
+// Based on https://arxiv.org/pdf/2106.03327v2.pdf
+// See also SLAC-75, pg 117
+///////////////////////////////////////////////////////////////////////////
+// NAME
+//   dipedge
+//
+// DESCRIPTION
+//   Zero length linear dipole edge transport (same as MAD-X dipedge)
+//
+// PARAMETERS
+//   bunch  = reference to the macro-particle bunch
+//   h      = angle/length - must equal the associated sbend to make sense
+//   e1     = edge angle
+//   fint   = field integral - same definition as for a MAD-X SBEND
+//   hgap   = half gap height of the associated sbend
+//
+// RETURNS
+//   Nothing
+//
+///////////////////////////////////////////////////////////////////////////
+
+void dipedge(Bunch* bunch, double h, double e1, double fint, double hgap)
+{
+    SyncPart* syncPart = bunch->getSyncPart();
+
+    // double dp_p_coeff = 1.0 / (syncPart->getMomentum() * syncPart->getBeta());
+    double sin_e1 = sin(e1);
+    double h_tan_e1 = h*tan(e1);
+    double psi = 2.0*fint*hgap*h*(1.0+sin_e1*sin_e1)/cos(e1);
+    double h_tan_e1_minus_psi = h*tan(e1-psi);
+
+    //coordinate array [part. index][x,xp,y,yp,z,dE]
+    double** arr = bunch->coordArr();
+
+    for(int i = 0; i < bunch->getSize(); i++)
+    {
+        //double dp_p = arr[i][5] * dp_p_coeff;
+
+        arr[i][1] += h_tan_e1*arr[i][0];
+        arr[i][3] -= h_tan_e1_minus_psi*arr[i][2];
+
+    }
+}
+
+
 }  //end of namespace teapot_base

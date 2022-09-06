@@ -75,6 +75,8 @@ namespace teapot_base
                      int nsteps, int useCharge);
 
     void RingRF(Bunch* bunch, double ring_length, int harmonic_numb, double voltage, double phase_s, int useCharge);
+
+    void dipedge(Bunch* bunch, double h, double e1, double fint, double hgap); // Added - nilanjan@uchicago.edu, 10/18/21
 }
 
 #endif  //TEAPOT_BASE_H
