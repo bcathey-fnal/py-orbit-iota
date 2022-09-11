@@ -51,4 +51,4 @@ compile: $(OBJS_WRAP) $(OBJS) $(INC)
 
 clean:
 	rm -rf ./obj/*.o
-	rm -rf $(ORBIT_ROOT)/lib/$(scattering_lib)
+	rm -rf $(ORBIT_ROOT)/lib/$(monitor_lib)

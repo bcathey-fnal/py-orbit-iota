@@ -1,4 +1,4 @@
-bin/pyORBIT
+bin/*
 **/*.pyc
 **/obj/*.o
 *.pyc
