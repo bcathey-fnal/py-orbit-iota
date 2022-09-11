@@ -1,4 +1,12 @@
-![Build](../../actions/workflows/compilation.yml/badge.svg)
+# Py-ORBIT-IOTA
+This is forked from the original [Py-ORBIT repo][https://github.com/PyORBIT-Collaboration/py-orbit]. We have included some minor modifications to the main code and added some new lattice elements and features.
+
+1. Dipole Edge element
+2. Thick McMillan lens
+3. Electron cooling
+4. Custom diagnostics
+
+These features have been very useful in simulating the [Integrable Optics Test Accelerator][https://fast.fnal.gov/]
 
 # Py-ORBIT  Installation
 
@@ -54,13 +62,12 @@ If you don't want to use standard libraries supplied by your distribution, you c
 ```shell
 git clone https://github.com/bcathey-fnal/py-orbit-iota.git
 ```
-Your source is now in the *py-orbit* directory.
+Your source is now in the *py-orbit-iota* directory.
 ## 3. Setup environment variables
-*setupEnevironment.sh* will try to figure out all paths.
-This should be sufficient for common Linux distributions. If you built the environment from source, use *customEnvironment.sh* instead.
+*setupEnevironment.sh* will try to figure out all paths. This should be sufficient for common Linux distributions. If you used a python virtual environment or a conda environment then these should be activated here. We provide *wilsonEnvironment.sh* for running in the [Fermilab Wilson cluster][https://computing.fnal.gov/wilsoncluster/]. If you built the environment from source, use *customEnvironment.sh* instead.
 ```shell
 cd py-orbit
-source setupEnvironment.sh
+source wilsonEnvironment.sh
 ```
 
 
@@ -76,10 +83,10 @@ If make failed, it usually means that some of the libraries aren't set up proper
 
 # Running Examples
 
-Setup the environment variables (needs to be done once per teminal session). If you built the environment from source, use *customEnvironment.sh* instead.
-Alternatively you can place `source <path-to-pyORBIT-installation>/setupEnvironment.sh` in your *.bashrc*.
+Setup the environment variables (needs to be done once per teminal session) using *setupEnvironment.sh* on a local machine or *wilsonEnvironment.sh* on the Wilson cluster. If you built the environment from source, use *customEnvironment.sh* instead.
+Alternatively you can place run the script in your *.bashrc*
 ```shell
-source setupEnvironment.sh
+source setupEnvironment.sh # Or customEnvironment.sh or wilsonEnvironment.sh
 cd examples/AccLattice_Tests
 ./START.sh lattice_test.py 2
 ```

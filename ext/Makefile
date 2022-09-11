@@ -2,6 +2,7 @@ DIRS  =
 DIRS += ./ecloud
 DIRS += ./monitor
 DIRS += ./mcmillan
+DIRS += ./scattering
 #DIRS += ./intsystem
 #DIRS += ./laserstripping
 #DIRS += ./H0starkeffect
