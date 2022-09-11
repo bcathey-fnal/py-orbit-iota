@@ -1,4 +1,7 @@
-
+##############################################################################
+# Use this setup only if you compiled all support libraries from source.
+# See BuildFromSource.md
+##############################################################################
 export ORBIT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo "ORBIT installed in $ORBIT_ROOT"
 

@@ -1,7 +1,10 @@
-# Wilson cluster specific!
+##############################################################################
+# OS Specific environment setup here
+# Wilson cluster
 module purge
 module load condaforge/py39 gnu8 openmpi3 gsl/2.6 fftw
 conda activate py27
+##############################################################################
 
 command_exists () {
     type "$1" &> /dev/null ;
