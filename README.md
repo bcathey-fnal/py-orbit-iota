@@ -66,8 +66,8 @@ Your source is now in the *py-orbit-iota* directory.
 ## 3. Setup environment variables
 *setupEnevironment.sh* will try to figure out all paths. This should be sufficient for common Linux distributions. If you used a python virtual environment or a conda environment then these should be activated here. We provide *wilsonEnvironment.sh* for running in the [Fermilab Wilson cluster](https://computing.fnal.gov/wilsoncluster/). If you built the environment from source, use *customEnvironment.sh* instead.
 ```shell
-cd py-orbit
-source wilsonEnvironment.sh
+cd py-orbit-iota
+source setupEnvironment.sh # Or customEnvironment.sh or wilsonEnvironment.sh
 ```
 
 
@@ -90,7 +90,7 @@ source setupEnvironment.sh # Or customEnvironment.sh or wilsonEnvironment.sh
 cd examples/AccLattice_Tests
 ./START.sh lattice_test.py 2
 ```
-This will launch *lattice_test* example on two MPI nodes. Other examples are availabale in [Examples](../../../examples) repository.
+This will launch *lattice_test* example on two MPI nodes. Other examples are availabale in [Examples](https://github.com/PyORBIT-Collaboration/examples) repository.
 
 # Structure
 **./src**		- source code for the core ORBIT C++ classes, including
