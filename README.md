@@ -12,6 +12,7 @@ These features have been very useful in simulating the [Integrable Optics Test A
 
 Installation procedure requires building from source.
 All installation steps happen in command line (terminal).
+Note that all required libraries are already installed in the [Fermilab Wilson cluster](https://computing.fnal.gov/wilsoncluster/), skip to step 2 and use *wilsonEnvironment.sh* to setup the build and execution environment.
 
 ## 1. Installing required libraries
 
@@ -64,7 +65,10 @@ git clone https://github.com/bcathey-fnal/py-orbit-iota.git
 ```
 Your source is now in the *py-orbit-iota* directory.
 ## 3. Setup environment variables
-*setupEnevironment.sh* will try to figure out all paths. This should be sufficient for common Linux distributions. If you used a python virtual environment or a conda environment then these should be activated here. We provide *wilsonEnvironment.sh* for running in the [Fermilab Wilson cluster](https://computing.fnal.gov/wilsoncluster/). If you built the environment from source, use *customEnvironment.sh* instead.
+*setupEnevironment.sh* will try to figure out all paths. This should be sufficient for common Linux distributions.
+If you used a python virtual environment or a conda environment then these should be activated here.
+We provide *wilsonEnvironment.sh* for running in the [Fermilab Wilson cluster](https://computing.fnal.gov/wilsoncluster/).
+If you built the support libraries from their sources, use *customEnvironment.sh* instead.
 ```shell
 cd py-orbit-iota
 source setupEnvironment.sh # Or customEnvironment.sh or wilsonEnvironment.sh

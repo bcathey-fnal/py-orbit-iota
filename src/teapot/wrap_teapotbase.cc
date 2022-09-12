@@ -491,7 +491,7 @@ extern "C"
         if(!PyArg_ParseTuple(   args, "Odddd:dipedge",
                              &pyBunch, &h, &e1, &fint, &hgap))
         {
-            error("teapotbase - bend1 - cannot parse arguments!");
+            error("teapotbase - dipedge - cannot parse arguments!");
         }
         Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object *) pyBunch)->cpp_obj;
         teapot_base::dipedge(cpp_bunch, h, e1, fint, hgap);
