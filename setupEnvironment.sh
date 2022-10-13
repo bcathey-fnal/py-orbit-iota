@@ -6,6 +6,8 @@ source ~/opt/anaconda3/etc/profile.d/conda.sh
 conda activate python2
 export FFTW_LIB=$CONDA_LIB
 export FFTW_INC=$CONDA_LIB/../include
+export GSL_LIB=$CONDA_LIB
+export GSL_INC=$CONDA_LIB/../include
 ##############################################################################
 
 command_exists () {
