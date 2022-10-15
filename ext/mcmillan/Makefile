@@ -47,5 +47,5 @@ compile: $(OBJS_WRAP) $(OBJS) $(INC)
 	$(CXX) $(CXXFLAGS) $(INCLUDES_LOCAL) $(INCLUDES) -c $< -o $@;
 
 clean:
-	rm -rf ./obj/*.o
-	rm -rf $(ORBIT_ROOT)/lib/$(mcmillan_lib)
+	rm -f ./obj/*.o
+	rm -f $(ORBIT_ROOT)/lib/$(mcmillan_lib)

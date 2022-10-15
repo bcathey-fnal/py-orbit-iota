@@ -15,8 +15,8 @@ clean:
 	@for dir in $(DIRS); do \
 		(cd $$dir; if [ -f ./Makefile ]; then $(MAKE) clean; fi;); \
 	done
-	rm -rf ./bin/pyORBIT
-	rm -rf ./doc/html
+	rm -f ./bin/pyORBIT
+	rm -f ./doc/html
 
 docs:
 	doxygen
