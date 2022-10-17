@@ -48,7 +48,7 @@ void TuneDetector::trackBunch(Bunch* bunch, double T[][4])
 
     // If the number of particles in the bunch is more than the allocated size
     if(npart_in_bunch > nparticles)
-        ORBIT_MPI_Finalize("monitor.tunedetector: trackBunch(bunch) encounted more particles than allocated.");
+        ORBIT_MPI_Finalize("monitor.tunedetector: trackBunch encounted more particles than allocated.");
 
     // Loop over all particles
     double xnow, ynow, znow;

@@ -21,14 +21,14 @@ class TuneDetector_AccNode(Monitoring_Base_AccNode):
         Constructor. Creates the tunedetector node element.
         """
         Monitoring_Base_AccNode.__init__(self, monitoring_calc, "TuneDetector", name)
-        self.TFloquet = np.eye(4).tolist()
+        self.Tmode = np.eye(4).tolist()
 
-    def setTFloquet(self, TFloquet):
+    def setTmode(self, Tmode):
         #pass
-        self.TFloquet = TFloquet.tolist()
+        self.Tmode = Tmode.tolist()
 
     def __str__(self):
-        return '{}: TuneDetector, l = 0, TFloquet = {}'.format(self.getName(), self.TFloquet)
+        return '{}: TuneDetector, l = 0, Tmode = {}'.format(self.getName(), self.Tmode)
 				
     def track(self, paramsDict):
         """
@@ -36,5 +36,5 @@ class TuneDetector_AccNode(Monitoring_Base_AccNode):
         """
         if(self.switcher != True): return
         bunch = paramsDict["bunch"]
-        self.monitoring_calc.trackBunch(bunch, self.TFloquet)
+        self.monitoring_calc.trackBunch(bunch, self.Tmode)
 		

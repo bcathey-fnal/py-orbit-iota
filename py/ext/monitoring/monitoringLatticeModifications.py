@@ -76,34 +76,36 @@ def setMonitoring_General_AccNodes(lattice, monitoring_ele_names, monitoring_len
             positionNext = accNode.getLength(part_index)
 
         # Does the next node have a different name or is this the last element?
-        if accNodeNext.getName() != accNode.getName() or inode == len(nodes_arr)-1:
+        if accNodeNext.getName() != ele_name or inode == len(nodes_arr)-1:
             ele_index_end = inode # This is the end of the element
             # Now that we have completely identified an element let's process
             # Check whether all elements are selected, or this one is selected
             if monitoring_ele_names == 'all' or (len(monitoring_ele_names) and ele_name in monitoring_ele_names):
-                if insert_middle:
-			# Find the ideal mid-points position in the element
-			ele_part_pos_middle = 0.5*(nodes_arr[ele_index_beg][2] + positionNext)
-			# By default the monitor will be inserted at the end
-			mon_insert_index = ele_index_beg
-			mon_insert_pos = nodes_arr[ele_index_beg][2]
-			# Interate over the part indices
-			for ele_part_inode in range(ele_index_beg, ele_index_end+1):
-			    # Find the first part which comes after the mid-point
-			    if nodes_arr[ele_part_inode][2] >= ele_part_pos_middle:
-				mon_insert_index = ele_part_inode # Mark the index
-				mon_insert_pos = nodes_arr[ele_part_inode][2] # Mark the position
-				break # We found it!
-			# print('Found {} domain = {},{} m, mon-pos = {} m'.format(ele_name,
-			#      nodes_arr[ele_index_beg][2], positionNext, mon_insert_pos))
-			# Add the monitoring node to th lattice
-			add_mon_node(nodes_arr[mon_insert_index][0], nodes_arr[mon_insert_index][1])
-		else:
-			add_mon_node(nodes_arr[ele_index_beg][0], nodes_arr[ele_index_beg][1])
+                if insert_middle: # Do we need to insert in the middle
+			        # Find the ideal mid-point position in the element
+			        ele_part_pos_middle = 0.5*(nodes_arr[ele_index_beg][2] + positionNext)
+                else:
+                    ele_part_pos_middle = 0 # Make sure the insert posituion is at the start of the element
 
-            # We are done processing the current element, let's get to the next one
-            if inode < len(nodes_arr)-1:
-                ele_index_beg = inode+1 # Mark the position of the new element
-                ele_name = accNodeNext.getName() # Save the name
+                # By default the monitor will be inserted at the beginning
+                mon_insert_index = ele_index_beg
+                mon_insert_pos = nodes_arr[ele_index_beg][2]
+                # Interate over the part indices
+                for ele_part_inode in range(ele_index_beg, ele_index_end+1):
+                    # Find the first part which comes after the "mid-point".
+                    # If ele_part_pos_middle is 0, then this sets the insertion at the beginning of the element.
+                    if nodes_arr[ele_part_inode][2] >= ele_part_pos_middle:
+                        mon_insert_index = ele_part_inode # Mark the index
+                        mon_insert_pos = nodes_arr[ele_part_inode][2] # Mark the position
+                        break # We found it!
+                # print('Found {} domain = {},{} m, mon-pos = {} m'.format(ele_name,
+                #      nodes_arr[ele_index_beg][2], positionNext, mon_insert_pos))
+                # Add the monitoring node to the lattice
+                add_mon_node(nodes_arr[mon_insert_index][0], nodes_arr[mon_insert_index][1])
+
+        # We are done processing the current element, let's get to the next one
+        if inode < len(nodes_arr)-1:
+            ele_index_beg = inode+1 # Mark the position of the new element
+            ele_name = accNodeNext.getName() # Save the name
 
     return monNodes_arr

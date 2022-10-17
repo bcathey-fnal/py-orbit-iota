@@ -73,11 +73,11 @@ class TEAPOT_Lattice(AccLattice):
 				self.addNode(elem)
 		self.initialize()
 
-	def readMADX(self, madx_file_name, seqName):
+	def readMADX(self, madx_file_name, seqName, verbosity=0):
 		"""
 			It creates the teapot lattice from MAD file.
 		"""
-		parser = MADX_Parser()
+		parser = MADX_Parser(verbosity)
 		parser.parse(madx_file_name)
 		
 		if(not seqName == parser.getSequenceName()):
@@ -174,11 +174,11 @@ class TEAPOT_Ring(AccLattice):
 		self.addChildren()
 		self.initialize()
 
-	def readMADX(self, madx_file_name, seqName):
+	def readMADX(self, madx_file_name, seqName, verbosity=0):
 		"""
 			It creates the teapot lattice from MAD file.
 			"""
-		parser = MADX_Parser()
+		parser = MADX_Parser(verbosity)
 		parser.parse(madx_file_name)
 		if(not seqName == parser.getSequenceName()):
 			print "==============================="
