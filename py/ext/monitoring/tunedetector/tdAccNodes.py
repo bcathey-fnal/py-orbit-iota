@@ -22,13 +22,23 @@ class TuneDetector_AccNode(Monitoring_Base_AccNode):
         """
         Monitoring_Base_AccNode.__init__(self, monitoring_calc, "TuneDetector", name)
         self.Tmode = np.eye(4).tolist()
+        self.isfirst = False
 
     def setTmode(self, Tmode):
-        #pass
+        """
+        Set the transform matrix for the node. By default it's identitity.
+        """
         self.Tmode = Tmode.tolist()
 
+    def isFirst(self, isfirst):
+        """
+        Flag whether this is the first tune detector node in the lattice.
+        """
+        self.isfirst = isfirst
+
     def __str__(self):
-        return '{}: TuneDetector, l = 0, Tmode = {}'.format(self.getName(), self.Tmode)
+        return '{}: TuneDetector, l = 0, Tmode = {}, enable={}'.format(
+                self.getName(), self.Tmode, self.enable)
 				
     def track(self, paramsDict):
         """
@@ -36,5 +46,5 @@ class TuneDetector_AccNode(Monitoring_Base_AccNode):
         """
         if(self.switcher != True): return
         bunch = paramsDict["bunch"]
-        self.monitoring_calc.trackBunch(bunch, self.Tmode)
+        self.monitoring_calc.trackBunch(bunch, self.Tmode, self.isfirst)
 		

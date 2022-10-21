@@ -31,6 +31,8 @@ def setTuneDetectorAccNodes(lattice, tunedetector_instance, bunch, verbosity):
     tdNodes_arr = setMonitoring_General_AccNodes(lattice, 'all', 0.01,
             tunedetector_instance, TuneDetector_AccNode)
 
+    tdNodes_arr[0].isFirst(True) # mark the first tune detector node
+
     tdNode_arr_cnt = 0
     tdNode_arr_len = len(tdNodes_arr)
     for matrixNode in lcl.getNodes(): # loop over all nodes
@@ -48,7 +50,7 @@ def setTuneDetectorAccNodes(lattice, tunedetector_instance, bunch, verbosity):
                     matrixNode_name_parts[1] == tdNode_name_parts[1]:
                     # Obtain the mode transform matrix for the lattice element
                     tdNodes_arr[tdNode_arr_cnt].setTmode(
-                                matrixNode.getParam('Vinv'))
+                                    matrixNode.getParam('Vinv'))
                     if verbosity > 1:
                         print('{} matched with {}'.format(
                             matrixNode.getName(),

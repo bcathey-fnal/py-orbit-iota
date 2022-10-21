@@ -80,16 +80,16 @@ extern "C" {
         pyORBIT_Object* pyTuneDetector = (pyORBIT_Object*) self; // Get the python tunedetector object
         TuneDetector* cpp_TuneDetector = (TuneDetector*) pyTuneDetector->cpp_obj; // Get the internal TuneDetector instance
         // Declare the python objects: floquet matrix, single row of matrix, bunch
-        PyObject *pyTfloquet, *pyTfloquetrow, *pyBunch;
+        PyObject *pyTfloquet, *pyTfloquetrow, *pyBunch; int isfirst;
         
         // Validate arguments
-        if(!PyArg_ParseTuple(args,"OO!:trackBunch",&pyBunch, &PyList_Type, &pyTfloquet))
-            ORBIT_MPI_Finalize("monitor.beamdist: trackBunch(bunch, Tfloquet) takes 2 arguments. Tfloquet is a 4x4 python list object.");
+        if(!PyArg_ParseTuple(args,"OO!i:trackBunch",&pyBunch, &PyList_Type, &pyTfloquet, &isfirst))
+            ORBIT_MPI_Finalize("monitor.beamdist: trackBunch(bunch, Tfloquet, isfirst) takes 3 arguments. Tfloquet is a 4x4 python list object.");
         // Obtain the python bunch type
         PyObject* pyORBIT_Bunch_Type = wrap_orbit_bunch::getBunchType("Bunch");
         // Check whether the pyBunch is of the bunch type
         if(!PyObject_IsInstance(pyBunch,pyORBIT_Bunch_Type))
-            ORBIT_MPI_Finalize("monitor.beamdist: trackBunch(bunch, Tfloquet) - The first argument is not a bunch.");
+            ORBIT_MPI_Finalize("monitor.beamdist: trackBunch(bunch, Tfloquet, isfirst) - The first argument is not a bunch.");
         
         Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object*)pyBunch)->cpp_obj; // Get the C++ instance of the bunch object
         if(PyList_Size(pyTfloquet) == 4) // The number of rows should be 4
@@ -117,7 +117,7 @@ extern "C" {
                     else Tfloquet[i][j] = 0.0;
         } 
         
-        cpp_TuneDetector->trackBunch(cpp_bunch, Tfloquet); // Finally call the tracker!
+        cpp_TuneDetector->trackBunch(cpp_bunch, Tfloquet, isfirst); // Finally call the tracker!
 
         // Return the python object none
         Py_INCREF(Py_None);
@@ -136,17 +136,19 @@ extern "C" {
         // Validate arguments
         if(PyArg_ParseTuple(args,"iO!:gettunes", &nturns, &PyList_Type, &pyDataBuff)) // Try to obtain the argument
         {
-            nparticles = cpp_TuneDetector->getcntx().size(); // Get the numer of data points in the tune detector
-            nrows = PyList_Size(pyDataBuff); // Obtain the number of rows, which is the number of particles
+            nparticles = cpp_TuneDetector->getParticleCount(); // Get the number of particles in the tune detector
+            nrows = PyList_Size(pyDataBuff); // Obtain the number of rows, which should be the number of particles
             if(nrows < nparticles) // Complain!
                 ORBIT_MPI_Finalize("monitor.tunedetector: gettunes(nturns, databuff). databuff contains less rows than number of particles.");
         }
         else ORBIT_MPI_Finalize("monitor.tunedetector: gettunes(nturns, databuff) takes 2 arguments. databuff is a python list");
 
-        // Extract local references to the data vectors
-        std::vector<int> &cntx = cpp_TuneDetector->getcntx();
-        std::vector<int> &cnty = cpp_TuneDetector->getcnty();
-        std::vector<int> &cntz = cpp_TuneDetector->getcntz();
+        // Tune data vectors
+        std::vector<double> mux, muy, muz;
+        // Extract the tune data
+        cpp_TuneDetector->getTuneX(mux, nturns);
+        cpp_TuneDetector->getTuneY(muy, nturns);
+        cpp_TuneDetector->getTuneZ(muz, nturns);
 
         // Copy all the data to the list object
         for(i=0; i<nparticles; i++)
@@ -154,16 +156,10 @@ extern "C" {
             pyDataSingleParticle = PyList_GetItem(pyDataBuff, i); // Get the coords for a single particles
             // Assign the coord data directly! BEWARE!!! This assumes a very specific list structure.
             // Should probably do this differently!
-            PyFloat_AS_DOUBLE(PyList_GetItem(pyDataSingleParticle, 6)) = (double)cntx[i]/nturns;
-            PyFloat_AS_DOUBLE(PyList_GetItem(pyDataSingleParticle, 7)) = (double)cnty[i]/nturns;
-            PyFloat_AS_DOUBLE(PyList_GetItem(pyDataSingleParticle, 8)) = (double)cntz[i]/nturns;
-
-            //if(i==0)
-            //    std::cout << WARNING_PREFIX << "Particle 0 tunes are: " << nturns << ": " << 
-            //        (double)cntx[i]/nturns << ", " << (double)cnty[i]/nturns << ", " << (double)cntz[i]/nturns << std::endl;
+            PyFloat_AS_DOUBLE(PyList_GetItem(pyDataSingleParticle, 6)) = mux[i];
+            PyFloat_AS_DOUBLE(PyList_GetItem(pyDataSingleParticle, 7)) = muy[i];
+            PyFloat_AS_DOUBLE(PyList_GetItem(pyDataSingleParticle, 8)) = muz[i];
         }
-
-        //std::cout << "trigcnt = " << cpp_TuneDetector->getcnttrig() << std::endl;
 
         // Return the python object none
         Py_INCREF(Py_None);

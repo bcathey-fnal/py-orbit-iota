@@ -57,6 +57,7 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
                 N = action_angle_matrix(T) # Normalization matrix
                 # Obtain the similarity transformation matrix
                 V, U, Vinv = edwards_teng_transformation(T)
+                Tfl = contruct_uncoupled_floquet(U)
                 # Add the s position and various parameters to the nodes
                 matrixNode.addParam('s', s)
                 matrixNode.addParam('T', T)
@@ -64,6 +65,7 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
                 matrixNode.addParam('V', V)
                 matrixNode.addParam('U', U)
                 matrixNode.addParam('Vinv', Vinv)
+                matrixNode.addParam('Nfl', np.dot(Tfl, Vinv))
 
                 # Update the s position and the 1-turn matrix
                 s += node_l
@@ -124,6 +126,27 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
             M_prev = to_numpy_matrix(matrixNode.getMatrix())
 
         return data
+
+    def getFloquet4D(self):
+        """
+        Get the Floquet matrix for 4D dynamics at lattice entrance
+        """
+        R = np.zeros((4,4)) # Rotation matrix in normalized phase space
+        # One turn matrix at the entrance of the lattice
+        M = to_numpy_matrix(self.getRingMatrix())
+        wM, vM = np.linalg.eig(M) # Get transverse eigenvalues
+        # Fill in the rotation matrix
+        R[0:2,0:2] = [[np.real(wM[0]), np.imag(wM[0])],
+                      [np.imag(wM[1]), np.real(wM[1])]]
+        R[2:4,2:4] = [[np.real(wM[2]), np.imag(wM[2])],
+                      [np.imag(wM[3]), np.real(wM[3])]]
+        # Get the eigen vectors for the rotation matrix.
+        # Eigenvalues are exactly same by construction.
+        wR, vR = np.linalg.eig(R)
+        # Finally generate Tf such that M = inv(Tf) @ R @ Tf
+        Tf = np.dot(vR, np.linalg.inv(vM))
+        #Tfinv = np.dot(vM, np.linalg.inv(vR))
+        return np.real(Tf) # Clip the imaginary parts, which are ~0
 
 ##############################################################################
 def to_numpy_matrix(orbit_matrix, size=4):
@@ -250,6 +273,28 @@ def extract_twiss_parameters(U):
     sin_theta = np.sign(U[0,1])*abs_sin_theta # get the sign of the sine value
     alpha = 0.5*(U[0,0] - U[1,1])/sin_theta # Obtain value of alpha
     return beta, alpha
+
+def contruct_uncoupled_floquet(U):
+    """
+    Construct the 4D Floquet matrix for the uncoupled transverse modes
+    to convert to normalized coordinates.
+    """
+    UA = U[0:2, 0:2].copy()
+    UB = U[2:4, 2:4].copy()
+    # Extract the normal mode Twiss parameters
+    beta, alfa = extract_twiss_parameters(UA)
+    betb, alfb = extract_twiss_parameters(UB)
+    Tfl = np.zeros((4,4)) # Create a Floquet matrix
+    # Mode a
+    Tfl[0,0] = beta**(-0.5)
+    Tfl[1,0] = alfa*beta**(-0.5)
+    Tfl[1,1] = beta**0.5
+    # Mode b
+    Tfl[2,2] = betb**(-0.5)
+    Tfl[3,2] = alfb*betb**(-0.5)
+    Tfl[3,3] = betb**0.5
+    return Tfl # Return the Floquet matrix
+
 
 def extract_phase_advance(beta1, beta2, alfa1, alfa2, M):
     """
