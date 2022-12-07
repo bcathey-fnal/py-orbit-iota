@@ -24,7 +24,7 @@ class BunchTwissAnalysis: public OrbitUtils::CppPyWrapper
 		virtual ~BunchTwissAnalysis();
 		
 		/** Performs the Twiss analysis of the bunch */
-		void analyzeBunch(Bunch* bunch);
+		void analyzeBunch(Bunch* bunch, double T[][4] = NULL);
 		
 		/** Returns the centered correlation <(x-<x>)*(y-<y>)> = <x*y> - <x>*<y> */
 		double getCorrelation(int ic, int jc);

@@ -46,7 +46,7 @@ BunchTwissAnalysis::~BunchTwissAnalysis()
 }
 
 /** Performs the Twiss analysis of the bunch */		
-void BunchTwissAnalysis::analyzeBunch(Bunch* bunch){
+void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4]){
 	
 	//initialization
 	for(int i = 0; i < 6; i++){
@@ -73,26 +73,56 @@ void BunchTwissAnalysis::analyzeBunch(Bunch* bunch){
 		for(int ip = 0; ip < nParts; ip++){
 			m_size = macroSizeAttr->macrosize(ip);
 			total_macrosize += m_size;
+
+            double part_coord_arr_rotated[6];
+            int icoord;
+            for(icoord=0; icoord < 6; icoord++)
+                part_coord_arr_rotated[icoord] = part_coord_arr[ip][icoord];
+            if(T)
+            {
+                for(icoord=0; icoord < 4; icoord++)
+                    part_coord_arr_rotated[icoord] = T[icoord][0]*part_coord_arr[ip][0] +
+                        T[icoord][1]*part_coord_arr[ip][1] +
+                        T[icoord][2]*part_coord_arr[ip][2] +
+                        T[icoord][3]*part_coord_arr[ip][3];
+            }
+
 			for(int i = 0; i < 6; i++){
-				avg_arr[i] += m_size*part_coord_arr[ip][i];
+				avg_arr[i] += m_size*part_coord_arr_rotated[i];
 			}
 			
 			for(int i = 0; i < 6; i++){
 				for(int j = 0; j < i+1; j++){
-					corr_arr[i+6*j] += m_size*part_coord_arr[ip][i]*part_coord_arr[ip][j];
+					corr_arr[i+6*j] += m_size*part_coord_arr_rotated[i]*part_coord_arr_rotated[j];
 				}	
 			}			
 		}	
 	} else {
 		m_size = 1.0;
 		for(int ip = 0; ip < nParts; ip++){
+
+            double part_coord_arr_rotated[6];
+            int icoord;
+            for(icoord=0; icoord < 6; icoord++)
+                part_coord_arr_rotated[icoord] = part_coord_arr[ip][icoord];
+            if(T)
+            {
+                for(icoord=0; icoord < 4; icoord++)
+                    part_coord_arr_rotated[icoord] = T[icoord][0]*part_coord_arr[ip][0] +
+                        T[icoord][1]*part_coord_arr[ip][1] +
+                        T[icoord][2]*part_coord_arr[ip][2] +
+                        T[icoord][3]*part_coord_arr[ip][3];
+            }
+
+
+
 			for(int i = 0; i < 6; i++){
-				avg_arr[i] += part_coord_arr[ip][i];
+				avg_arr[i] += part_coord_arr_rotated[i];
 			}
 			
 			for(int i = 0; i < 6; i++){
 				for(int j = 0; j < i+1; j++){
-					corr_arr[i+6*j] += part_coord_arr[ip][i]*part_coord_arr[ip][j];
+					corr_arr[i+6*j] += part_coord_arr_rotated[i]*part_coord_arr_rotated[j];
 				}	
 			}	
 		}

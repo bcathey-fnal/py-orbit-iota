@@ -36,17 +36,40 @@ extern "C" {
   
  /** Performs the Twiss analysis of the bunch */
   static PyObject* BunchTwissAnalysis_analyzeBunch(PyObject *self, PyObject *args){
-	  BunchTwissAnalysis* cpp_BunchTwissAnalysis = (BunchTwissAnalysis*)((pyORBIT_Object*) self)->cpp_obj;
-		PyObject* pyBunch;
-		if(!PyArg_ParseTuple(args,"O:analyzeBunch",&pyBunch)){
-			ORBIT_MPI_Finalize("BunchTwissAnalysis - analyzeBunch(Bunch* bunch) - parameter are needed.");
+	    
+        int i,j;
+        double T[4][4]; // transformation matrix
+        
+        BunchTwissAnalysis* cpp_BunchTwissAnalysis = (BunchTwissAnalysis*)((pyORBIT_Object*) self)->cpp_obj;
+		// Declare the python objects: transformation matrix, single row of matrix, bunch
+        PyObject *pyT = NULL, *pyTrow = NULL, *pyBunch = NULL;
+        // Validate arguments
+		if(!PyArg_ParseTuple(args,"O|O!:analyzeBunch",&pyBunch, &PyList_Type, &pyT)){
+			ORBIT_MPI_Finalize("BunchTwissAnalysis - analyzeBunch(bunch, T) - Bunch is needed for analysis. T if provided must be a 4x4 python list object.");
 		}
 		PyObject* pyORBIT_Bunch_Type = wrap_orbit_bunch::getBunchType("Bunch");
 		if(!PyObject_IsInstance(pyBunch,pyORBIT_Bunch_Type)){
 			ORBIT_MPI_Finalize("BunchTwissAnalysis - analyzeBunch(Bunch* bunch) - method needs a Bunch.");
 		}
 		Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object*)pyBunch)->cpp_obj;
-		cpp_BunchTwissAnalysis->analyzeBunch(cpp_bunch);
+        if(pyT && PyList_Size(pyT) == 4) // The number of rows should be 4
+        {
+            //std::cout << WARNING_PREFIX << "T = [";
+            for(i=0;i<4;i++)
+            {
+                //std::cout << "[";
+                pyTrow = PyList_GetItem(pyT, i);
+                for(j=0;j<4;j++)
+                {
+                    T[i][j] = PyFloat_AS_DOUBLE(PyList_GetItem(pyTrow, j));
+                    //std::cout << T[i][j] << ", ";
+                }
+                //std::cout << "], ";
+            }
+            //std::cout << "]" << std::endl;
+            cpp_BunchTwissAnalysis->analyzeBunch(cpp_bunch, T);
+        }
+        else cpp_BunchTwissAnalysis->analyzeBunch(cpp_bunch);
 		Py_INCREF(Py_None);
 		return Py_None;
   }
