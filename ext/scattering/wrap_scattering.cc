@@ -1,6 +1,7 @@
 #include "orbit_mpi.hh"
 #include "wrap_ecooler.hh"
 #include "wrap_electronbeam.hh"
+#include <iostream>
 
 static PyMethodDef scatteringMethods[] = { {NULL,NULL} };
 
@@ -12,7 +13,7 @@ extern "C" {
     {
         //create new module
         PyObject* module = Py_InitModule("scattering", scatteringMethods);
-        //add the other classes init
+	//add the other classes init
         wrap_scattering::initECooler(module);
         wrap_scattering::initElectronBeam(module);
     }

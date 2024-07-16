@@ -196,16 +196,17 @@ extern "C" {
         return Py_BuildValue("ddd", dE, dtheta, dphi); // Return the errors
     }
 
-    // Interface to int ECooler::getcoolingforce(double r, double vz, double vr, double &fpara, double &fperp)
+    // Interface to int ECooler::getcoolingforce(double x, double y, double vx, double vy, double vz,
+    //            double &fx, double &fy, double &fz)
     static PyObject* ECooler_getcoolingforce(PyObject *self, PyObject *args)
     {
-        double r, vz, vr, fpara, fperp;
+        double r, vz, vr, fx, fy, fz;
         pyORBIT_Object* pyECooler = (pyORBIT_Object*) self; // Get the python ECooler object
         ECooler* cpp_ECooler = (ECooler*) pyECooler->cpp_obj; // Get the internal ECooler instance
         if(!PyArg_ParseTuple(args,"ddd:getforce",&r,&vz,&vr)) // Try to obtain the arguments
             ORBIT_MPI_Finalize("scattering.ecooler: getcoolingforce(r,vz,vr) takes 3 arguments.");
-        cpp_ECooler->getcoolingforce(r, vz, vr, fpara, fperp);
-        return Py_BuildValue("dd", fpara, fperp);
+        cpp_ECooler->getcoolingforce(r, 0.0, vr, 0.0, vz, fx, fy, fz);
+        return Py_BuildValue("dd", fz, fx);
     }
 
     // Interface to ECooler::trackBunch(Bunch* bunch, double length)

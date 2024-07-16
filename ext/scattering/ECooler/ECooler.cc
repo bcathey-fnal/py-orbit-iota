@@ -276,21 +276,19 @@ void ECooler::prepareParkhomchuk()
     sigma_v_e_z = sqrt(CoolingBeam->getTpara()*kB/mass_electron_MKS);
     sigma_v_e_r = sqrt(CoolingBeam->getTperp()*kB/mass_electron_MKS);
     omega_p = CoolingBeam->getOmegap(CoolingBeam->rmax/2.0);
-    CoolingBeam->getStaticField(0.0, Er, Vdep);
-    CoolingBeam->getStaticField(CoolingBeam->rmax, Er, V0);
     
     // Now set up Parkhomchuk model parameters
+    // $\frac{4 m_e (r_e c^2)^2}{\Delta_{e,\perp}^2}
     parkhomchuk_force_prefactor = force_scaling*4.0*mass_electron_MKS*r_ec_sqr*
         r_ec_sqr/(sigma_v_e_r*sigma_v_e_r);
+    // \rho_L = \Delta_{e,\perp}/\omega_{c,e}
     parkhomchuk_rho_L = sigma_v_e_r*mass_electron_MKS/
         (OrbitConst::elementary_charge_MKS*Bcooler); // Larmor radius
-    // Effective velocity of electrons - verified
-    parkhomchuk_v_sqr_e_eff = sigma_v_e_z*sigma_v_e_z + Er*Er/(Bcooler*Bcooler);
+    
+    // Effective velocity of electrons - this will be a function of position
+    // parkhomchuk_v_sqr_e_eff = sigma_v_e_z*sigma_v_e_z + Er*Er/(Bcooler*Bcooler);
     // Inverse of time of flight through cooler segment
     parkhomchuk_1_over_tau = beta_e*gamma_e*OrbitConst::c/max_cooler_seg_length;
-    //std::cout << "Effective velocity used for the Parkhomchuk"
-    //    " model is " << std::setprecision(3) << sqrt(parkhomchuk_v_sqr_e_eff)
-    //        << " m/s" << std::endl;
 }
 
 // Switches for electron cooling and the e-lens kick
@@ -455,10 +453,10 @@ void ECooler::trackBunch(Bunch* bunch, double length, double xc, double yc)
 
     // Ion coordinates in various frames
     double beta0_ion, gamma0_ion, rho_BF, r_LF[4], r_BF[4], p_LF_over_mc[4],
-           p_PBF_over_mc[4], p_BF_over_mc[4], v_x_BF, v_y_BF, v_z_BF,
-           v_rho_BF, cos_phi_v_BF, sin_phi_v_BF;
+           p_PBF_over_mc[4], p_BF_over_mc[4], v_x_BF, v_y_BF, v_z_BF;
+
     // Forces and fields
-    double fcool_perp_BF, fcool_para_BF, Esc_rho_BF, V0,
+    double fcool_x_BF, fcool_y_BF, fcool_z_BF, Esc_rho_BF, V0,
            F_BF[4], F_PBF[4], F_LF[4];
 
     // Ion kick parameters
@@ -529,29 +527,25 @@ void ECooler::trackBunch(Bunch* bunch, double length, double xc, double yc)
             v_x_BF = OrbitConst::c*p_BF_over_mc[1]/p_BF_over_mc[0];
             v_y_BF = OrbitConst::c*p_BF_over_mc[2]/p_BF_over_mc[0];
             v_z_BF = OrbitConst::c*p_BF_over_mc[3]/p_BF_over_mc[0];
-            v_rho_BF = sqrt(v_x_BF*v_x_BF+v_y_BF*v_y_BF); // Transverse vel
-            cos_phi_v_BF = v_x_BF/v_rho_BF; sin_phi_v_BF = v_y_BF/v_rho_BF;
-
+           
 
             // Step 3: Calculate the net force on a single ion
             // Set all forces to 0 by default
-            fcool_perp_BF = fcool_para_BF = Esc_rho_BF = 0.0;
+            fcool_x_BF = fcool_y_BF = fcool_z_BF = Esc_rho_BF = 0.0;
             // Get the cooling force
             if(include_cooling_force)
-                getcoolingforce(rho_BF, v_z_BF, v_rho_BF, fcool_para_BF,
-                                fcool_perp_BF);
+                getcoolingforce(r_BF[1], r_BF[2], v_x_BF, v_y_BF, v_z_BF,
+                        fcool_x_BF, fcool_y_BF, fcool_z_BF);
             // Get the radial electric field due to the space charge of the e beam
             if(include_electron_lens_kick)
                 CoolingBeam->getStaticField(rho_BF, Esc_rho_BF, V0);
+            
             // Calculate the 4-force on the ion in BF.
             // F^\mu \equiv [\gamma \vec{f} \cdot \vec{\beta}, \gamma \vec{f}]
-            F_BF[1] = p_BF_over_mc[0]*(fcool_perp_BF*cos_phi_v_BF +
-                        ion_charge*Esc_rho_BF*r_BF[1]/rho_BF);
-            F_BF[2] = p_BF_over_mc[0]*(fcool_perp_BF*sin_phi_v_BF +
-                        ion_charge*Esc_rho_BF*r_BF[2]/rho_BF);
-            F_BF[3] = p_BF_over_mc[0]*fcool_para_BF;
-            F_BF[0] = (F_BF[1]*v_x_BF + F_BF[2]*v_y_BF + F_BF[3]*v_z_BF)
-                        /OrbitConst::c;
+            F_BF[1] = p_BF_over_mc[0]*(fcool_x_BF + ion_charge*Esc_rho_BF*r_BF[1]/rho_BF);
+            F_BF[2] = p_BF_over_mc[0]*(fcool_y_BF + ion_charge*Esc_rho_BF*r_BF[2]/rho_BF);
+            F_BF[3] = p_BF_over_mc[0]*fcool_z_BF;
+            F_BF[0] = (F_BF[1]*v_x_BF + F_BF[2]*v_y_BF + F_BF[3]*v_z_BF)/OrbitConst::c;
             // Now transform the 4-force to the lab frame
             transform_vector(4, rotation_PBF_from_BF, F_BF, F_PBF);
             transform_vector(4, boost_LF_from_PBF, F_PBF, F_LF);
@@ -566,22 +560,24 @@ void ECooler::trackBunch(Bunch* bunch, double length, double xc, double yc)
 }
 
 // Get the cooling forces
-int ECooler::getcoolingforce(double r, double vz, double vr, double &fpara, double &fperp)
+int ECooler::getcoolingforce(double x, double y, double vx, double vy, double vz,
+        double &fx, double &fy, double &fz)
 {
     int success;
-    double prefactor, n_e, v_e;
-    // Get the electron beam density and relative velocity at the axis
-    // This will be changed to any arbitrary radius
-    CoolingBeam->getBeamPropertiesatRadius(r, n_e, v_e);
-    vz -= v_e; // Correct for electron relative velocities
-    double visqr, abs_vz = abs(vz), fsign = (vz < 0.0) - (vz > 0.0);
-    double bmax, bmin, Lp, vsqr, vsqr_3_2; // For Parkhomchuk model 
+    double prefactor, n_e, v_e[3];
+    // Get the electron beam density and mean relative velocity in the beam frame
+    CoolingBeam->getBeamPropertiesatRadius(x, y, Bcooler, n_e, v_e);
+    // To make sure we can model dragging of ion beam energy we convert the
+    // longitudinal ion velocity to the rest frame of the electron beam at the
+    // radius it's interacting with.
+    vz -= v_e[2];
+    double r = sqrt(x*x+y*y), visqr, vr = sqrt(vx*vx+vy*vy), abs_vz = abs(vz),
+           fsign = (vz < 0.0) - (vz > 0.0);
+    double fpara = GSL_NAN, fperp = GSL_NAN; // For non-magnetic model and LUT model
+    double parkhomchuk_v_sqr_e_eff, bmax, bmin, Lp, vsqr, vsqr_3_2; // For Parkhomchuk model
+    fx = fy = fz = 0.0; // By default force is 0 
     if(r > CoolingBeam->rmax)
-    {
-        fpara = fperp = 0.0; // The ion is outside the boundary of the e beam
-        success = 1; // We were successful
-    }
-    else fpara = fperp = GSL_NAN; // Initialize cooling forces
+        return 1; // We're outside the beam, cooling force is 0
     switch(cooler_model)
     {
         case ECOOLER_NON_MAGNETIC:
@@ -612,12 +608,13 @@ int ECooler::getcoolingforce(double r, double vz, double vr, double &fpara, doub
             prefactor = Zions*Zions*parkhomchuk_force_prefactor * n_e 
                 *sigma_v_e_r*sigma_v_e_r;
             visqr = vz*vz + vr*vr; // Ion velocity square
+            // Effective velocity of electron beam
+            parkhomchuk_v_sqr_e_eff = v_e[0]*v_e[0]+v_e[1]*v_e[1]+sigma_v_e_z*sigma_v_e_z;
             vsqr = visqr+parkhomchuk_v_sqr_e_eff;
-            // Slightly different from Eq. 3.86 in BETACOOL manual, but matches with JSPEC
             vsqr_3_2 = pow(vsqr, 1.5);
-            bmin = Zions*r_ec_sqr/vsqr; // Minimum impact parameter
+            bmin = Zions*r_ec_sqr/visqr; // Minimum impact parameter
             // Maximum impact parameter
-            bmax = sqrt(vsqr)/(parkhomchuk_1_over_tau+omega_p);
+            bmax = sqrt(visqr)/(parkhomchuk_1_over_tau+omega_p);
             // Coulomb log
             Lp = log((bmax+bmin+parkhomchuk_rho_L)/(bmin+parkhomchuk_rho_L));
             // Cooling forces
@@ -643,6 +640,12 @@ int ECooler::getcoolingforce(double r, double vz, double vr, double &fpara, doub
 
         default:
             success = 0;
+    }
+    if(success)
+    {
+        fx = fperp*vx/vr;
+        fy = fperp*vy/vr;
+        fz = fpara;
     }
     return success; // Return success flag
 }

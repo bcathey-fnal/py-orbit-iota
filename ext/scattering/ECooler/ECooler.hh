@@ -64,8 +64,8 @@ class ECooler: public OrbitUtils::CppPyWrapper
         // Non-magnetic model parameters
         double nm_force_prefactor, nm_force_asymptotic_Lc;
         // Parkhomchuk model parameters
-        double parkhomchuk_force_prefactor, parkhomchuk_v_sqr_e_eff,
-               parkhomchuk_rho_L, parkhomchuk_1_over_tau;
+        double parkhomchuk_force_prefactor, parkhomchuk_rho_L,
+               parkhomchuk_1_over_tau;
 
         // LUT model data
         double lut_force_prefactor, lut_vz_max, lut_vr_max;
@@ -124,7 +124,8 @@ class ECooler: public OrbitUtils::CppPyWrapper
         int copyLUT(double &prefactor, std::vector<double> &vz, std::vector<double> &vr,
                 std::vector<double> &fpara, std::vector<double> &fperp);
         // Get cooling forces
-        int getcoolingforce(double r, double vz, double vr, double &fpara, double &fperp);
+        int getcoolingforce(double x, double y, double vx, double vy, double vz,
+                double &fx, double &fy, double &fz);
         // Track the bunch passing through the cooler
         void trackBunch(Bunch* bunch, double length, double xc=0.0, double yc=0.0);
 };
