@@ -45,19 +45,44 @@ BunchTwissAnalysis::~BunchTwissAnalysis()
 	free(corr_arr_MPI);
 }
 
-/** Performs the Twiss analysis of the bunch */		
-void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4]){
-	
+/** Performs the Twiss analysis of the bunch */
+// Added dispersion compensation support - nilanjan@fnal.gov, 07/16/24
+void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4], double *D){
+
+    // Gather some important parameters
+    SyncPart* syncPart = bunch->getSyncPart();
+
+    bunch_momentum = syncPart->getMomentum();
+    bunch_beta = syncPart->getBeta();
+    bunch_gamma = syncPart->getGamma();
+    bunch_kinenergy = syncPart->getEnergy();
+    bunch_mass = syncPart->getMass();
+
 	//initialization
-	for(int i = 0; i < 6; i++){
+    int i,j;
+	for(i = 0; i < 6; i++){
 		avg_arr[i] = 0.;
 	}
 	
-	for(int i = 0; i < 6; i++){
-		for(int j = 0; j < 6; j++){
+	for(i = 0; i < 6; i++){
+		for(j = 0; j < 6; j++){
 			corr_arr[i+6*j] = 0.;
 		}	
 	}
+
+    // Initialize the dispersion vector - nilanjan@fnal.gov, 07/16/24
+    double D6[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    if(D) // Copy the transverse dispersion
+    {
+        for(i = 0; i < 4; i++)
+            D6[i] = D[i]/(bunch_momentum * bunch_beta);
+    }
+
+    /*std::cout << "D6 = {";
+    for(i = 0; i < 6; i++)
+        std::cout << D6[i] << ", ";
+    std::cout << "}" << std::endl;*/
+
 	count = 0;
 	total_macrosize = 0.;
 	
@@ -74,17 +99,21 @@ void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4]){
 			m_size = macroSizeAttr->macrosize(ip);
 			total_macrosize += m_size;
 
-            double part_coord_arr_rotated[6];
+            double part_coord_arr_nodisp[6], part_coord_arr_rotated[6];
             int icoord;
             for(icoord=0; icoord < 6; icoord++)
-                part_coord_arr_rotated[icoord] = part_coord_arr[ip][icoord];
+            {
+                // Compensate for dispersion - nilanjan@fnal.gov, 07/16/24
+                part_coord_arr_nodisp[icoord] = part_coord_arr[ip][icoord] - D6[icoord]*part_coord_arr[ip][5];
+                part_coord_arr_rotated[icoord] = part_coord_arr_nodisp[icoord];
+            }
             if(T)
             {
                 for(icoord=0; icoord < 4; icoord++)
-                    part_coord_arr_rotated[icoord] = T[icoord][0]*part_coord_arr[ip][0] +
-                        T[icoord][1]*part_coord_arr[ip][1] +
-                        T[icoord][2]*part_coord_arr[ip][2] +
-                        T[icoord][3]*part_coord_arr[ip][3];
+                    part_coord_arr_rotated[icoord] = T[icoord][0]*part_coord_arr_nodisp[0] +
+                        T[icoord][1]*part_coord_arr_nodisp[1] +
+                        T[icoord][2]*part_coord_arr_nodisp[2] +
+                        T[icoord][3]*part_coord_arr_nodisp[3];
             }
 
 			for(int i = 0; i < 6; i++){
@@ -100,18 +129,21 @@ void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4]){
 	} else {
 		m_size = 1.0;
 		for(int ip = 0; ip < nParts; ip++){
-
-            double part_coord_arr_rotated[6];
+            double part_coord_arr_nodisp[6], part_coord_arr_rotated[6];
             int icoord;
             for(icoord=0; icoord < 6; icoord++)
-                part_coord_arr_rotated[icoord] = part_coord_arr[ip][icoord];
+            {
+                // Compensate for dispersion - nilanjan@fnal.gov, 07/16/24
+                part_coord_arr_nodisp[icoord] = part_coord_arr[ip][icoord] - D6[icoord]*part_coord_arr[ip][5];
+                part_coord_arr_rotated[icoord] = part_coord_arr_nodisp[icoord];
+            }
             if(T)
             {
                 for(icoord=0; icoord < 4; icoord++)
-                    part_coord_arr_rotated[icoord] = T[icoord][0]*part_coord_arr[ip][0] +
-                        T[icoord][1]*part_coord_arr[ip][1] +
-                        T[icoord][2]*part_coord_arr[ip][2] +
-                        T[icoord][3]*part_coord_arr[ip][3];
+                    part_coord_arr_rotated[icoord] = T[icoord][0]*part_coord_arr_nodisp[0] +
+                        T[icoord][1]*part_coord_arr_nodisp[1] +
+                        T[icoord][2]*part_coord_arr_nodisp[2] +
+                        T[icoord][3]*part_coord_arr_nodisp[3];
             }
 
 
@@ -160,15 +192,6 @@ void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4]){
 			}	
 		}	
 	}
-	
-	SyncPart* syncPart = bunch->getSyncPart();	
-	
-	bunch_momentum = syncPart->getMomentum();
-	bunch_beta = syncPart->getBeta();
-	bunch_gamma = syncPart->getGamma();
-	bunch_kinenergy = syncPart->getEnergy();
-	bunch_mass = syncPart->getMass();
-	
 }
 
 

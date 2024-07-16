@@ -35,6 +35,11 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
         # Initialize the teapot matrix lattice
         TEAPOT_MATRIX_Lattice.__init__(self, teapot_lattice, bunch, name)
 
+        # Save a constant which converts from de coordinate used in PyORBIT
+        # to the standard dp/p coordinate.
+        syncPart = bunch.getSyncParticle()
+        self.de_over_dp_p = syncPart.momentum()*syncPart.beta()
+
         # Analyze optics
         self.analyze()
 
@@ -42,21 +47,44 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
         """
         Perform linear analysis of the lattice.
         """
+
         # Obtain the 1-turn map at lattice start
-        T = to_numpy_matrix(self.getRingMatrix())
+        T = to_numpy_matrix(self.getRingMatrix(), size=6)
+
         s = 0.0 # The s position at the start of the lattice
 
         # Iterate through all nodes and find the one-turn matrices
         # at the position of each nodes.
+        i = 0 # A counter
+        # Initialize the tilt matrix and its inverse
+        tilt_matrix = np.eye(6)
+        tilt_matrix_inv = np.eye(6)
         for matrixNode in self.getNodes():
             # Check that the node is of the type BaseMATRIX
             if(isinstance(matrixNode,BaseMATRIX) == True):
                 # Extract the node length and matrix
                 node_l = matrixNode.getLength()
-                node_matrix = to_numpy_matrix(matrixNode.getMatrix())
-                N = action_angle_matrix(T) # Normalization matrix
+                node_matrix = to_numpy_matrix(matrixNode.getMatrix(), size=6)
+
+                # If this node is a tilt_in then update the tilt matrix
+                if 'tilt_in' in matrixNode.getName():
+                    tilt_matrix = node_matrix
+                    tilt_matrix_inv = np.linalg.inv(tilt_matrix)
+                    node_matrix = np.eye(6) # Set the node itself to identity
+                # If the node is a tilt_out then reset the tilt matrix
+                elif 'tilt_out' in matrixNode.getName():
+                    tilt_matrix = np.eye(6)
+                    tilt_matrix_inv = np.eye(6)
+                    node_matrix = np.eye(6) # Set the node itself to identity
+                else:
+                    # Modify the node matrix to account for the tilts
+                    node_matrix = np.dot(tilt_matrix_inv, np.dot(node_matrix, tilt_matrix))
+
+                N = action_angle_matrix(T[0:4, 0:4]) # Normalization matrix
+
                 # Obtain the similarity transformation matrix
-                V, U, Vinv = edwards_teng_transformation(T)
+                V, U, Vinv = edwards_teng_transformation(T[0:4, 0:4])
+                
                 Tfl = contruct_uncoupled_floquet(U)
                 # Add the s position and various parameters to the nodes
                 matrixNode.addParam('s', s)
@@ -66,8 +94,8 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
                 matrixNode.addParam('U', U)
                 matrixNode.addParam('Vinv', Vinv)
                 matrixNode.addParam('Nfl', np.dot(Tfl, Vinv))
-
-                # Update the s position and the 1-turn matrix
+                # Update counter, the s position and the 1-turn matrix
+                i += 1
                 s += node_l
                 T = np.dot(node_matrix, np.dot(T, np.linalg.inv(node_matrix)))
 
@@ -79,10 +107,11 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
         for matrixNode in self.getNodes():
             cnt_nodes += 1
 
-        data = np.zeros((cnt_nodes,7)) # Create the data array
+        data = np.zeros((cnt_nodes,11)) # Create the data array
 
         # Iterate over all elements
         i = 0 # Counter
+        tilted_element = False
         for matrixNode in self.getNodes():
             # Get the un-coupled one-turn matrices
             U = matrixNode.getParam('U')
@@ -91,39 +120,44 @@ class Linear_Coupled_Lattice(TEAPOT_MATRIX_Lattice):
             # Extract the normal mode Twiss parameters
             beta, alfa = extract_twiss_parameters(UA)
             betb, alfb = extract_twiss_parameters(UB)
+            # Extract dispersion
+            Dx, Dxp, Dy, Dyp = extract_dispersion(matrixNode.getParam('T'),
+                    self.de_over_dp_p)
 
-            # Extract the inverse of the decoupling matrix of this node
-            Vinv = matrixNode.getParam('Vinv')
-
-            #print('============================================================')
-            #print('{}: s = {}'.format(matrixNode.getName(),matrixNode.getParam('s')))
-
-            # Extract the phase advance from the last node to this node
-            if i > 0: # Only do this starting from node 1
-                # Extract the transfer matrix for this node
-                M = to_numpy_matrix(matrixNode.getMatrix())
-                # Calculate the un-coupled transfer matrices
+            if i > 0 and 'tilt' not in matrixNode.getName():
+                # Extract the inverse of the decoupling matrix of this node
+                Vinv = matrixNode.getParam('Vinv')
+                # Calculate the uncoupled transfer matrices
                 Munc = np.dot(Vinv, np.dot(M_prev, V_prev))
-                # Extract the eigen values and eigenvectors of the un-coupled
-                # matrices
+                # Extract the eigen values and eigenvectors of the
+                # uncoupled matrices
                 muA = extract_phase_advance(data[i-1,2], beta, data[i-1,3],
                                             alfa, Munc[0:2, 0:2])
                 muB = extract_phase_advance(data[i-1,5], betb, data[i-1,6],
-                                            alfb, Munc[2:4, 2:4])
+                                        alfb, Munc[2:4, 2:4])
+                # Save the decoupling matrix for the node
+                V_prev = matrixNode.getParam('V')
+                # Extract the transfer matrix for the node
+                M_prev = to_numpy_matrix(matrixNode.getMatrix())
+            else:
+                muA = muB = 0.0
 
             # Finally save the data 
             data[i, 0] = matrixNode.getParam('s') # Put s position
-            data[i, 2] = beta; data[i, 3] = alfa
-            data[i, 5] = betb; data[i, 6] = alfb
-            if i > 0:
+            data[i, 2] = beta; data[i, 3] = alfa # Eigenmode a
+            data[i, 5] = betb; data[i, 6] = alfb # Eigenmode b
+            data[i, 7] = Dx; data[i, 8] = Dxp; data[i, 9] = Dy; data[i, 10] = Dyp # Dispersions
+
+            if i>0:
                 data[i, 1] = data[i-1, 1] + muA
                 data[i, 4] = data[i-1, 4] + muB
+            else:
+                # Save the decoupling matrix for the node
+                V_prev = matrixNode.getParam('V')
+                # Extract the transfer matrix for the node
+                M_prev = to_numpy_matrix(matrixNode.getMatrix())
 
             i += 1 # Update the counter
-            # Save the decoupling matrix for this node
-            V_prev = matrixNode.getParam('V')
-            # Extract the transfer matrix for this node
-            M_prev = to_numpy_matrix(matrixNode.getMatrix())
 
         return data
 
@@ -234,10 +268,19 @@ def action_angle_matrix(T):
 
     return N
 
+
 def edwards_teng_transformation(T):
     """
     Compute the similarity transformation T = VUV^{-1} using the Edwards
     and Teng formalism.
+
+    Parameters:
+    - T: 4D one-turn matrix. Numpy array with shape (4,4)
+
+    Returns:
+    - V: Tensor to convert normal mode coords to physical coords
+    - U: Uncoupled transverse one-turn matrix
+    - Vinv: Tensor to convert physical coords to normal mode coords
     """
     # First extract the important matrices
     M = T[0:2, 0:2].copy()
@@ -263,9 +306,17 @@ def edwards_teng_transformation(T):
 
     return V, U, Vinv
 
+
 def extract_twiss_parameters(U):
     """
     Extract twiss parameters from the normal mode matrix.
+
+    Parameters:
+    - U: Uncoupled transverse one-turn matrix
+
+    Returns:
+    - beta: Beta function at this position in the lattice (m)
+    - alpha: Alfa function at this position in the lattice (m)
     """
     cos_theta = 0.5*(U[0,0] + U[1,1]) # Cosine of the phase advance
     abs_sin_theta = (1.0 - cos_theta*cos_theta)**0.5 # Absolute value of sine
@@ -274,10 +325,17 @@ def extract_twiss_parameters(U):
     alpha = 0.5*(U[0,0] - U[1,1])/sin_theta # Obtain value of alpha
     return beta, alpha
 
+
 def contruct_uncoupled_floquet(U):
     """
     Construct the 4D Floquet matrix for the uncoupled transverse modes
     to convert to normalized coordinates.
+
+    Parameters:
+    - U: Uncoupled transverse one-turn matrix
+
+    Returns:
+    - Tfl: Floquet matrix which converts from uncoupled space to normal space.
     """
     UA = U[0:2, 0:2].copy()
     UB = U[2:4, 2:4].copy()
@@ -300,6 +358,16 @@ def extract_phase_advance(beta1, beta2, alfa1, alfa2, M):
     """
     Extract phase advance from a transport matrix given the initial
     and final Twiss parameters.
+
+    Parameters:
+    - beta1: Initial beta function before transport (m)
+    - beta2: Final beta function after transport (m)
+    - alfa1: Initial alfa function before transport
+    - alfa2: Final alfa function after transport
+    - M: 2D transport matrix. Numpy array with shape (2,2)
+
+    Returns:
+    - mu: Phase advance of a particle passing through M
     """
     # M_{12} = \sqrt{\beta_1 \beta_2} \sin \mu
     sin_mu = M[0,1]*(beta1*beta2)**(-0.5)
@@ -309,3 +377,24 @@ def extract_phase_advance(beta1, beta2, alfa1, alfa2, M):
     # cos_mu_2 = M[1,1]*(beta2/beta1)**0.5 + alfa2*sin_mu
     mu = np.angle(cos_mu_1 + 1j*sin_mu)/(2.0*np.pi) # Extract the phase advance
     return mu
+
+
+def extract_dispersion(T, de_over_dp_p):
+    """
+    Extract dispersion from the 6D one turn matrix.
+
+    Parameters:
+    - T: Numpy matrix with shape (6,6)
+    - de_over_dp_p: Constant to transform relative momentum deviation to
+                    energy deviation. $\mathrm{d}E/\mathrm{d}\delta p/p_0$ (GeV)
+
+    Returns:
+    - Dx: Dispersion in x (m)
+    - Dxp: Disperion in xp
+    - Dy: Dispersion in y (m)
+    - Dyp: Dispersion in yp
+    """
+    M = T[0:4, 0:4]
+    D = de_over_dp_p*T[0:4, 5]
+    eta = np.dot(np.linalg.inv(np.eye(4) - M), D)
+    return eta[0], eta[1], eta[2], eta[3]
