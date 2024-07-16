@@ -36,11 +36,11 @@ extern "C" {
     // This is implementation of the __init__ method TuneDetector(int npart, double T[][4])
     static int TuneDetector_init(pyORBIT_Object *self, PyObject *args, PyObject *kwds)
     {
-        int i,j, npart; // Array indices and number of particles
+        int i,j, npart, nturns; // Array indices, number of particles and turns
         // Try parsing the input parameters
-        if(!PyArg_ParseTuple(args, "i:__init__", &npart))
-            ORBIT_MPI_Finalize("monitor.tunedetector(npart): npart is an integer.");
-        self->cpp_obj = new TuneDetector(npart); // Create a new instance of the C++ object
+        if(!PyArg_ParseTuple(args, "ii:__init__", &npart, &nturns))
+            ORBIT_MPI_Finalize("monitor.tunedetector(npart, nturns): npart and nturns are integers.");
+        self->cpp_obj = new TuneDetector(npart, nturns); // Create a new instance of the C++ object
         ((TuneDetector*) self->cpp_obj)->setPyWrapper((PyObject*) self); // Point to Python object
         return 0;
     }
@@ -57,16 +57,16 @@ extern "C" {
         self->ob_type->tp_free((PyObject*)self);
     }
 
-    // Interface to TuneDetector::reset(int npart)
+    // Interface to TuneDetector::reset(int npart, int nturns)
     static PyObject* TuneDetector_reset(PyObject *self, PyObject *args)
     {
         pyORBIT_Object* pyTuneDetector = (pyORBIT_Object*) self; // Get the python tunedetector object
         TuneDetector* cpp_TuneDetector = (TuneDetector*) pyTuneDetector->cpp_obj; // Get the internal TuneDetector instance
         // Validate argument
-        int npart;
-        if(!PyArg_ParseTuple(args,"i:reset",&npart)) // Try to obtain the argument
-            ORBIT_MPI_Finalize("monitor.tunedetector: reset(npart) takes 1 argument.");
-        cpp_TuneDetector->reset(npart); // Reset the tune detector
+        int npart, nturns;
+        if(!PyArg_ParseTuple(args,"ii:reset",&npart, &nturns)) // Try to obtain the argument
+            ORBIT_MPI_Finalize("monitor.tunedetector: reset(npart, nturns) takes 2 argument.");
+        cpp_TuneDetector->reset(npart, nturns); // Reset the tune detector
         // Return the python object none
         Py_INCREF(Py_None);
         return Py_None;
@@ -76,7 +76,7 @@ extern "C" {
     static PyObject* TuneDetector_trackBunch(PyObject *self, PyObject *args)
     {
         int i,j;
-        double Tfloquet[4][4]; // Floquet matrix
+        double Tfloquet[4][5]; // Floquet matrix
         pyORBIT_Object* pyTuneDetector = (pyORBIT_Object*) self; // Get the python tunedetector object
         TuneDetector* cpp_TuneDetector = (TuneDetector*) pyTuneDetector->cpp_obj; // Get the internal TuneDetector instance
         // Declare the python objects: floquet matrix, single row of matrix, bunch
@@ -84,7 +84,7 @@ extern "C" {
         
         // Validate arguments
         if(!PyArg_ParseTuple(args,"OO!i:trackBunch",&pyBunch, &PyList_Type, &pyTfloquet, &isfirst))
-            ORBIT_MPI_Finalize("monitor.beamdist: trackBunch(bunch, Tfloquet, isfirst) takes 3 arguments. Tfloquet is a 4x4 python list object.");
+            ORBIT_MPI_Finalize("monitor.beamdist: trackBunch(bunch, Tfloquet, isfirst) takes 3 arguments. Tfloquet is a 4x5 python list object.");
         // Obtain the python bunch type
         PyObject* pyORBIT_Bunch_Type = wrap_orbit_bunch::getBunchType("Bunch");
         // Check whether the pyBunch is of the bunch type
@@ -99,7 +99,7 @@ extern "C" {
             {   
                 //std::cout << "[";
                 pyTfloquetrow = PyList_GetItem(pyTfloquet, i);
-                for(j=0;j<4;j++)
+                for(j=0;j<5;j++)
                 {
                     Tfloquet[i][j] = PyFloat_AS_DOUBLE(PyList_GetItem(pyTfloquetrow, j));
                     //std::cout << Tfloquet[i][j] << ", ";
@@ -110,11 +110,14 @@ extern "C" {
         }
         else
         {
-            std::cout << WARNING_PREFIX << "Setting Tfloquet to the identity matrix." << std::endl;
+            std::cout << WARNING_PREFIX << "Setting Tfloquet to the identity matrix with 0 dispersion." << std::endl;
             for(i=0;i<4;i++)
+            {
+                Tfloquet[i][4] = 0.0;
                 for(j=0;j<4;j++)
                     if(i==j)Tfloquet[i][j] = 1.0;
                     else Tfloquet[i][j] = 0.0;
+            }
         } 
         
         cpp_TuneDetector->trackBunch(cpp_bunch, Tfloquet, isfirst); // Finally call the tracker!
@@ -127,28 +130,32 @@ extern "C" {
     // Copy the tune data stored in TuneDetector
     static PyObject* TuneDetector_gettunes(PyObject *self, PyObject *args)
     {
-        // iterator, number of turns, number of rows in the data buffer, number of particles
-        int i, nturns, nrows, nparticles;
+        // iterator, number of rows in the data buffer, number of particles
+        int i, nrows, nparticles;
         pyORBIT_Object* pyTuneDetector = (pyORBIT_Object*) self; // Get the python tunedetector object
         TuneDetector* cpp_TuneDetector = (TuneDetector*) pyTuneDetector->cpp_obj; // Get the internal TuneDetector instance
         PyObject *pyDataBuff, *pyDataSingleParticle; // Declare a pointer to the numpy array memory object
 
         // Validate arguments
-        if(PyArg_ParseTuple(args,"iO!:gettunes", &nturns, &PyList_Type, &pyDataBuff)) // Try to obtain the argument
+        if(PyArg_ParseTuple(args,"O!:gettunes", &PyList_Type, &pyDataBuff)) // Try to obtain the argument
         {
             nparticles = cpp_TuneDetector->getParticleCount(); // Get the number of particles in the tune detector
             nrows = PyList_Size(pyDataBuff); // Obtain the number of rows, which should be the number of particles
             if(nrows < nparticles) // Complain!
-                ORBIT_MPI_Finalize("monitor.tunedetector: gettunes(nturns, databuff). databuff contains less rows than number of particles.");
+            {
+                std::cout << WARNING_PREFIX << "monitor.tunedetector: gettunes(databuff)." <<
+                    " databuff contains less rows than the number of entries in the tune array." << std::endl;
+                nparticles = nrows; // Only dump the number of particles the data buffer can handle
+            }
         }
-        else ORBIT_MPI_Finalize("monitor.tunedetector: gettunes(nturns, databuff) takes 2 arguments. databuff is a python list");
+        else ORBIT_MPI_Finalize("monitor.tunedetector: gettunes(databuff) takes 1 argument. databuff is a python list");
 
         // Tune data vectors
         std::vector<double> mux, muy, muz;
         // Extract the tune data
-        cpp_TuneDetector->getTuneX(mux, nturns);
-        cpp_TuneDetector->getTuneY(muy, nturns);
-        cpp_TuneDetector->getTuneZ(muz, nturns);
+        cpp_TuneDetector->getTuneX(mux);
+        cpp_TuneDetector->getTuneY(muy);
+        cpp_TuneDetector->getTuneZ(muz);
 
         // Copy all the data to the list object
         for(i=0; i<nparticles; i++)
