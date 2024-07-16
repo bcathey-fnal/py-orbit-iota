@@ -63,21 +63,21 @@ extern "C" {
         //std::cout << "Destroyed ElectronBeam instance." << std::endl << std::flush;
     }
 
-    // Interface to ElectronBeam::getBeamPropertiesatRadius(double r, double &nebeam, double *vebeam)
+    // Interface to ElectronBeam::getBeamPropertiesatRadius(double x, double y, double B, double &nebeam, double *vebeam)
     static PyObject* ElectronBeam_getBeamPropertiesatRadius(PyObject *self, PyObject *args)
     {
         int nVars = PyTuple_Size(args); // Get the number of arguments passed to python
         pyORBIT_Object* pyElectronBeam = (pyORBIT_Object*) self; // Get the python ElectronBeam object
         ElectronBeam* cpp_ElectronBeam = (ElectronBeam*) pyElectronBeam->cpp_obj; // Get the internal ElectronBeam instance
         // Radial position, number density, beam velocity, radial field, voltage depression
-        double radius, nebeam, vebeam, Er, Vdep;
+        double x, y, radius, B, nebeam, vebeam[3], Er, Vdep;
 
         // Validate arguments
-        if(!PyArg_ParseTuple(args,"d:getBeamPropertiesatRadius",&radius)) // Try to obtain the arguments
-            ORBIT_MPI_Finalize("scattering.electronbeam: getBeamPropertiesatRadius(radius) takes 1 argument.");
-        cpp_ElectronBeam->getBeamPropertiesatRadius(radius, nebeam, vebeam); // Get the density and velocity values
-        cpp_ElectronBeam->getStaticField(radius, Er, Vdep); // Get the field and potential
-        return Py_BuildValue("dddd", nebeam, vebeam, Er, Vdep);
+        if(!PyArg_ParseTuple(args,"ddd:getBeamPropertiesatRadius",&x, &y, &B)) // Try to obtain the arguments
+            ORBIT_MPI_Finalize("scattering.electronbeam: getBeamPropertiesatRadius(x, y, B) takes 3 arguments.");
+        cpp_ElectronBeam->getBeamPropertiesatRadius(x, y, B, nebeam, vebeam); // Get the density and velocity values
+        cpp_ElectronBeam->getStaticField(sqrt(x*x+y*y), Er, Vdep); // Get the field and potential
+        return Py_BuildValue("dddddd", nebeam, vebeam[0], vebeam[1], vebeam[2], Er, Vdep);
     }
 
     // Interface to ElectronBeam::getTpara()
@@ -133,7 +133,7 @@ extern "C" {
     // Declaration of methods
     static PyMethodDef ElectronBeamClassMethods[] = {
         { "getBeamPropertiesatRadius", ElectronBeam_getBeamPropertiesatRadius, METH_VARARGS,
-            "Get the beam density (1/m^3) and velocity (m/s) - getBeamPropertiesatRadius(radius)"},
+            "Get the beam density (1/m^3) and velocity (m/s) - getBeamPropertiesatRadius(x, y, B)"},
         { "getTpara", ElectronBeam_getTpara, METH_VARARGS,
             "Get the beam longitudinal temperature (K). - getTpara()"},
         { "getTperp", ElectronBeam_getTperp, METH_VARARGS,

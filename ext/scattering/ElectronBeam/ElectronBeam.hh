@@ -18,7 +18,7 @@
 // Orbit constants
 #include "OrbitConst.hh"
 
-// Physical constants
+// More physical constants
 #define kB 1.38064852e-23 // Boltzmann constant in J/K
 #define epsilon_0 8.8541878128e-12 // Vacuum permittivity in C^2/(Nm^2)
 #define mass_electron_MKS 9.109383702e-31 // Electron mass in kg
@@ -51,8 +51,10 @@ class ElectronBeam: public OrbitUtils::CppPyWrapper
         ~ElectronBeam();
         // Apply voltage error
         void setdeltaV(double dE);
+        // Return beam density
+        double getBeamDensity(double r);
         // Return beam properties at given radius
-        void getBeamPropertiesatRadius(double r, double &nebeam, double &vebeam);
+        void getBeamPropertiesatRadius(double x, double y, double B, double &nebeam, double *vebeam);
         // Get beam temperatures
         double getTpara();
         double getTperp();
