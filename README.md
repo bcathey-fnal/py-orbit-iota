@@ -21,6 +21,7 @@ sudo apt install build-essential
 sudo apt install python2-dev libmpich-dev libfftw3-dev libgsl-dev
 ```
 The python2-dev package providing Python 2.7.18 is no longer available beyond Ubuntu 22.04 LTS. In this case install it manually as follows:
+
 a. Install important Python2.7.18 dependencies.
 ```shell
 sudo apt install libssl-dev libbz2-dev libffi-dev zlib1g-dev libhdf5-dev libpkgconf-dev
