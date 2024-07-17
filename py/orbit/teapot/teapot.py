@@ -140,29 +140,29 @@ class TEAPOT_Lattice(AccLattice):
 		return self.useCharge
 
 class TEAPOT_Ring(TEAPOT_Lattice):
-	"""
-		The subclass of the AccLattice class. Shell class for the TEAPOT nodes collection for rings.
-		TEAPOT has the ability to read MAD files.
-		"""
-	def __init__(self, name = "no name"):
+    """
+    The subclass of the AccLattice class. Shell class for the TEAPOT nodes collection for rings.
+    TEAPOT has the ability to read MAD files.
+    """
+    def __init__(self, name = "no name"):
         TEAPOT_Lattice.__init__(self,name)
 
-	def addChildren(self):
+    def addChildren(self):
         """
-		Adds Bunch wrapping nodes to all lattice nodes of 1st level.
-		These wrapping nodes will move particles from head ( tail ) to tail ( head)
-		if the longitudinal positions too big / small(negative).
-		"""
-		TEAPOT_Lattice.initialize(self)
-		for node in self.getNodes():
-			length = node.getLength()
-			if(length > 0.):
-				bunchwrapper = BunchWrapTEAPOT(node.getName()+":Bunch_Wrap:Exit")
-				bunchwrapper.getParamsDict()["ring_length"] = self.getLength()
-				node.addChildNode(bunchwrapper, AccNode.EXIT)				
-		#---- adding turn counter node at the end of lattice
-		turn_counter = TurnCounterTEAPOT()
-		self.getNodes().append(turn_counter)
+        Adds Bunch wrapping nodes to all lattice nodes of 1st level.
+        These wrapping nodes will move particles from head ( tail ) to tail ( head)
+        if the longitudinal positions too big / small(negative).
+        """
+        TEAPOT_Lattice.initialize(self)
+        for node in self.getNodes():
+            length = node.getLength()
+            if(length > 0.):
+                bunchwrapper = BunchWrapTEAPOT(node.getName()+":Bunch_Wrap:Exit")
+                bunchwrapper.getParamsDict()["ring_length"] = self.getLength()
+                node.addChildNode(bunchwrapper, AccNode.EXIT)				
+        #---- adding turn counter node at the end of lattice
+        turn_counter = TurnCounterTEAPOT()
+        self.getNodes().append(turn_counter)
 
 
 class _teapotFactory:
@@ -246,22 +246,23 @@ class _teapotFactory:
             if(params.has_key("k3")):
                 k3 = params["k3"]
                 params["k3l"] = k3*length
-		# ===========QUAD quadrupole element =====================
+    # ===========QUAD quadrupole element =====================
         if(madElem.getType().lower()  == "quad" or \
-			 madElem.getType().lower()  == "quadrupole"):
-			elem = QuadTEAPOT(madElem.getName())
-			kq = 0.
-			if(params.has_key("k1")):
-				kq = params["k1"]
-            elif params.has_key("k1s"): # Added skew support - nilanjan@fnal.gov, 04/27/23 
+            madElem.getType().lower()  == "quadrupole"):
+            elem = QuadTEAPOT(madElem.getName())
+            kq = 0.
+            if params.has_key("k1"):
+                kq = params["k1"]
+            # Added skew support - nilanjan@fnal.gov, 04/27/23
+            elif params.has_key("k1s"): 
                 kq = params["k1s"] # Use as normal quad strength
                 if abs(kq) > 1e-9: # An arbitrary threshold
                     tilt = True # Activate tilt
-			elem.addParam("kq",kq)
-			if(tilt):
-				if(tiltAngle == None):
-					tiltAngle = math.math.pi/4.0
-		# ===========Sextupole element =====================
+            elem.addParam("kq",kq)
+            if(tilt):
+                if(tiltAngle == None):
+                    tiltAngle = math.math.pi/4.0
+    # ===========Sextupole element =====================
         if(madElem.getType().lower()  == "sextupole"):
 			elem = MultipoleTEAPOT(madElem.getName())
 			k2 = 0.
