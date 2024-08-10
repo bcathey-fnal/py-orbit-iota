@@ -1,9 +1,5 @@
-#include "orbit_mpi.hh"
 #include <iostream>
-#include "wrap_beamdist.hh"
-#include "wrap_tunedetector.hh"
-// #include "wrap_schottky.hh"
-// #include "wrap_bpm.hh"
+#include "wrap_monitor.hh"
 
 static PyMethodDef monitorMethods[] = { {NULL,NULL} };
 

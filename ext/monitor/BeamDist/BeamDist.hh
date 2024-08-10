@@ -2,10 +2,6 @@
 #ifndef BEAMDIST_H
 #define BEAMDIST_H
 
-
-// MPI Function Wrappers
-#include "orbit_mpi.hh"
-#include "wrap_mpi_comm.hh"
 // ORBIT includes
 #include "Bunch.hh"
 #include "OrbitConst.hh"

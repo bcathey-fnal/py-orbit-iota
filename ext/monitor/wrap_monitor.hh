@@ -4,6 +4,11 @@
 #include "Python.h"
 #include <vector>
 
+#include "wrap_beamdist.hh"
+#include "wrap_tunedetector.hh"
+// #include "wrap_schottky.hh"
+// #include "wrap_bpm.hh"
+
 namespace wrap_monitor{
 
 #ifdef __cplusplus

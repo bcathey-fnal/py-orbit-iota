@@ -3,6 +3,11 @@
 
 #include "Python.h"
 
+#include "orbit_mpi.hh"
+#include "pyORBIT_Object.hh"
+#include "ElectronBeam.hh"
+#include "wrap_scattering.hh"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -3,6 +3,9 @@
 
 #include "Python.h"
 
+#include "wrap_ecooler.hh"
+#include "wrap_electronbeam.hh"
+
 namespace wrap_scattering{
 
 #ifdef __cplusplus

@@ -1,9 +1,4 @@
-#include "orbit_mpi.hh"
-#include "pyORBIT_Object.hh"
-#include "wrap_scattering.hh"
 #include "wrap_electronbeam.hh"
-
-#include "ElectronBeam.hh"
 
 #include <iostream>
 

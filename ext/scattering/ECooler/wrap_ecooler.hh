@@ -4,6 +4,14 @@
 #include "Python.h"
 #include <vector>
 
+#include "orbit_mpi.hh"
+#include "pyORBIT_Object.hh"
+#include "wrap_scattering.hh"
+#include "wrap_bunch.hh"
+
+#include "ECooler.hh"
+#include "ElectronBeam.hh"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
