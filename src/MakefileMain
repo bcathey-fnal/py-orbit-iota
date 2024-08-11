@@ -1,13 +1,11 @@
 include ../conf/make_root_config
 
 DIRS = $(filter-out test%,$(patsubst %/, %, $(filter %/,$(shell ls -F))))
+EXT_DIRS = $(patsubst %/, ../ext/%, $(filter %/,$(shell ls -F ../ext/)))
 
 #objects files list for ORBIT executable
 OBJS = $(foreach dir,$(DIRS),$(wildcard $(dir)/obj/*.o))
-
-#FFTW library
-#FFTW_LIBS = -L${FFTW3_ROOT}/lib -lfftw3
-#LIBS += ${FFTW_LIBS}
+OBJS += $(foreach dir,$(EXT_DIRS),$(wildcard $(dir)/obj/*.o))
 
 #========rules=========================
 

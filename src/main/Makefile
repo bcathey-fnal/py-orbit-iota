@@ -13,6 +13,14 @@ LOWER_DIRS = $(foreach dir,$(UPPER_DIRS),$(patsubst %/, ../$(dir)/%,$(filter %/,
 INCLUDES_LOCAL = $(patsubst %, -I../%, $(UPPER_DIRS))
 INCLUDES_LOCAL += $(filter-out %obj,$(patsubst %, -I%, $(LOWER_DIRS)))
 
+# Include files from extensions if present
+EXT_OUTER_DIRS = $(patsubst %/, ../../ext/%, $(filter %/,$(shell ls -F ../../ext/)))
+EXT_INNER_DIRS = $(foreach dir,$(EXT_OUTER_DIRS),$(patsubst %/, $(dir)/%, $(filter-out obj/, $(filter %/,$(shell ls -F $(dir))))))
+
+INCLUDES_EXT = -I../../ext
+INCLUDES_EXT += $(patsubst %, -I%, $(EXT_OUTER_DIRS))
+INCLUDES_EXT += $(patsubst %, -I%, $(EXT_INNER_DIRS))
+
 INC  = $(wildcard *.hh)
 INC += $(wildcard *.h)
 INC += $(foreach dir,$(DIRS),$(wildcard ./$(dir)/*.hh))
@@ -31,7 +39,7 @@ compile: $(OBJS_WRAP) $(OBJS) $(INC)
 	$(CXX) $(CXXFLAGS) $(WRAPPER_FLAGS) $(INCLUDES_LOCAL) $(INCLUDES) -c $< -o $@;
 
 ./obj/%.o : %.cc $(INC)
-	$(CXX) $(CXXFLAGS) $(INCLUDES_LOCAL) $(INCLUDES) -c $< -o $@;
+	$(CXX) $(CXXFLAGS) $(INCLUDES_LOCAL) $(INCLUDES_EXT) $(INCLUDES) -c $< -o $@;
 	
 ./obj/%.o : ./*/%.cc $(INC)
 	$(CXX) $(CXXFLAGS) $(INCLUDES_LOCAL) $(INCLUDES) -c $< -o $@;

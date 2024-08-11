@@ -31,7 +31,7 @@ WRAPPER_FLAGS = -fno-strict-aliasing
 CXXFLAGS += -fPIC -std=c++11
 
 # Monitor shared library
-monitor_lib = monitor.so
+monitor_lib = libmonitor.so
 
 #========rules=========================
 compile: $(OBJS_WRAP) $(OBJS) $(INC)

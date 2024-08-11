@@ -3,6 +3,8 @@
 
 #include "Python.h"
 
+namespace wrap_mcmillan{
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,5 +16,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif  // __cplusplus
+
+} // end of namespace wrap_mcmillan
 
 #endif // WRAP_MCMILLAN_H

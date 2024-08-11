@@ -31,7 +31,7 @@ WRAPPER_FLAGS = -fno-strict-aliasing
 CXXFLAGS += -fPIC -std=c++11
 
 # Scattering shared library
-scattering_lib = scattering.so
+scattering_lib = libscattering.so
 
 #========rules=========================
 compile: $(OBJS_WRAP) $(OBJS) $(INC)

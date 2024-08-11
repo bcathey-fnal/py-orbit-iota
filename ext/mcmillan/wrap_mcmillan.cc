@@ -25,7 +25,7 @@ extern "C" {
         //create new module
         PyObject* module = Py_InitModule("mcmillan", mcmillanMethods);
         // Register the McMillan class
-        initclassMcMillan(module);
+        wrap_mcmillan::initclassMcMillan(module);
     }
 
     //----------------------------------//

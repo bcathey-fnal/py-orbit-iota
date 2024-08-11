@@ -70,8 +70,9 @@ source setupEnvironment.sh
 ```shell 
 make clean
 make
+make
 ```
-If make failed, it usually means that some of the libraries aren't set up properly.
+The first time, make will fail to build the PyORBIT executable but should succeed in everything else. This is because the main executable requires all object files for the extensions be already built. Once make is invoked a second time, it should succeed in building the executable. If make fails, it usually means that some of the libraries aren't set up properly.
 
 
 # Running Examples

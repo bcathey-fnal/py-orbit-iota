@@ -8,9 +8,12 @@ LIBS += $(PYTHON_ROOT_LIB)
 #LIBS += -ldl -lreadline -ltermcap -lpthread -lutil -lm -Xlinker -export-dynamic
 LIBS += -ldl -lpthread -lutil -lm -Xlinker
 
-#FFTW library
+# FFTW library
 FFTW_LIBS = -L${FFTW_LIB} -lfftw3
 LIBS += $(EXTRA_LIB) ${FFTW_LIBS} -lz
+# GNU Scientific library
+LIBS += -lgsl -lgslcblas
+
 
 #-------------------------------------------------------------------------------
 # include file locations

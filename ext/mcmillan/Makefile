@@ -28,7 +28,7 @@ WRAPPER_FLAGS = -fno-strict-aliasing
 CXXFLAGS += -fPIC -std=c++11
 
 # McMillan shared library
-mcmillan_lib = mcmillan.so
+mcmillan_lib = libmcmillan.so
 
 #========rules=========================
 compile: $(OBJS_WRAP) $(OBJS) $(INC)

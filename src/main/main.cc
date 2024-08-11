@@ -19,6 +19,9 @@
 #include "wrap_fieldtracker.hh"
 #include "wrap_impedances.hh"
 
+// Extension modules
+#include "wrap_ext.hh"
+
 /**
  * The main function that will initialize the MPI and will
  * call the python interpreter: Py_Main(argc,argv).
@@ -69,6 +72,9 @@ int main(int argc, char **argv)
   // Space-charge package
 
   initspacecharge();
+
+  // Initialize extension modules here!
+  initext();
 
   // The python interpreter
   // It will call Py_Initialize() again, but there is no harm.
