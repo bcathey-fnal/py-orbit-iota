@@ -139,30 +139,131 @@ class TEAPOT_Lattice(AccLattice):
 		""" If useCharge != 1 the trackBunch(...) method will assume the charge = +1 """ 
 		return self.useCharge
 
-class TEAPOT_Ring(TEAPOT_Lattice):
-    """
-    The subclass of the AccLattice class. Shell class for the TEAPOT nodes collection for rings.
-    TEAPOT has the ability to read MAD files.
-    """
-    def __init__(self, name = "no name"):
-        TEAPOT_Lattice.__init__(self,name)
+class TEAPOT_Ring(AccLattice):
+	"""
+		The subclass of the AccLattice class. Shell class for the TEAPOT nodes collection for rings.
+		TEAPOT has the ability to read MAD files.
+		"""
+	def __init__(self, name = "no name"):
+		AccLattice.__init__(self,name)
+		self.useCharge = 1		
+	
+	def readMAD(self, mad_file_name, lineName):
+		"""
+			It creates the teapot lattice from MAD file.
+			"""
+		parser = MAD_Parser()
+		parser.parse(mad_file_name)
+		accLines = parser.getMAD_LinesDict()
+		if(not accLines.has_key(lineName)):
+			print "==============================="
+			print "MAD file: ", mad_file_name
+			print "Can not find accelerator line: ", lineName
+			print "STOP."
+			sys.exit(1)
+		# accelerator lines and elements from mad_parser package
+		accMAD_Line = accLines[lineName]
+		self.setName(lineName)
+		accMADElements = accMAD_Line.getElements()
+		# make TEAPOT lattice elements by using TEAPOT
+		# element factory
+		for madElem in accMADElements:
+			elems = _teapotFactory.getElements(madElem)
+			for elem in elems:
+				self.addNode(elem)
+		self.addChildren()
+		self.initialize()
 
-    def addChildren(self):
-        """
-        Adds Bunch wrapping nodes to all lattice nodes of 1st level.
-        These wrapping nodes will move particles from head ( tail ) to tail ( head)
-        if the longitudinal positions too big / small(negative).
-        """
-        TEAPOT_Lattice.initialize(self)
-        for node in self.getNodes():
-            length = node.getLength()
-            if(length > 0.):
-                bunchwrapper = BunchWrapTEAPOT(node.getName()+":Bunch_Wrap:Exit")
-                bunchwrapper.getParamsDict()["ring_length"] = self.getLength()
-                node.addChildNode(bunchwrapper, AccNode.EXIT)				
-        #---- adding turn counter node at the end of lattice
-        turn_counter = TurnCounterTEAPOT()
-        self.getNodes().append(turn_counter)
+	def readMADX(self, madx_file_name, seqName, verbosity=0):
+		"""
+			It creates the teapot lattice from MAD file.
+			"""
+		parser = MADX_Parser(verbosity)
+		parser.parse(madx_file_name)
+		if(not seqName == parser.getSequenceName()):
+			print "==============================="
+			print "MADX file: ", madx_file_name
+			print "Can not find accelerator sequence: ", seqName
+			print "STOP."
+			sys.exit(1)
+		
+		self.setName(parser.getSequenceName())
+		accMADElements = parser.getSequenceList()
+		# make TEAPOT lattice elements by using TEAPOT
+		# element factory
+		for madElem in accMADElements:
+			elems = _teapotFactory.getElements(madElem)
+			for elem in elems:
+				self.addNode(elem)
+		self.addChildren()
+		self.initialize()
+
+	def addChildren(self):
+		AccLattice.initialize(self)
+		for node in self.getNodes():
+			bunchwrapper = BunchWrapTEAPOT("Bunch Wrap")
+			bunchwrapper.getParamsDict()["ring_length"] = self.getLength()
+			node.addChildNode(bunchwrapper, AccNode.BODY)
+			
+	def initialize(self):
+		AccLattice.initialize(self)
+		#set up ring length for RF nodes
+		ringRF_Node = RingRFTEAPOT()
+		bunchwrap_Node = BunchWrapTEAPOT()
+		for node in self.getNodes():
+			if(node.getType() == ringRF_Node.getType()):
+				node.getParamsDict()["ring_length"] = self.getLength()
+			
+		paramsDict = {}
+		actions = AccActionsContainer()
+
+		def accSetWrapLengthAction(paramsDict):
+			"""
+			Nonbound function. Sets lattice length for wrapper nodes
+			"""
+			node = paramsDict["node"]
+			bunchwrap_node = BunchWrapTEAPOT()
+			if(node.getType() == bunchwrap_Node.getType()):
+				node.getParamsDict()["ring_length"] = self.getLength()
+
+		actions.addAction(accSetWrapLengthAction, AccNode.EXIT)
+		self.trackActions(actions, paramsDict)
+		actions.removeAction(accSetWrapLengthAction, AccNode.EXIT)
+
+
+	def getSubLattice(self, index_start = -1, index_stop = -1,):
+		"""
+		It returns the new TEAPOT_Lattice with children with indexes 
+		between index_start and index_stop inclusive
+		"""
+		new_teapot_lattice = self._getSubLattice(TEAPOT_Lattice(),index_start,index_stop)
+		new_teapot_lattice.setUseRealCharge(self.getUseRealCharge())
+		return new_teapot_lattice		
+		
+	
+	def trackBunch(self, bunch, paramsDict = {}, actionContainer = None):
+		"""
+			It tracks the bunch through the lattice.
+			"""
+		if(actionContainer == None): actionContainer = AccActionsContainer("Bunch Tracking")
+		paramsDict["bunch"] = bunch
+		paramsDict["useCharge"] = self.useCharge		
+		
+		def track(paramsDict):
+			node = paramsDict["node"]
+			node.track(paramsDict)
+		
+		actionContainer.addAction(track, AccActionsContainer.BODY)
+		self.trackActions(actionContainer,paramsDict)
+		actionContainer.removeAction(track, AccActionsContainer.BODY)
+		
+	def setUseRealCharge(self, useCharge = 1):
+		""" If useCharge != 1 the trackBunch(...) method will assume the charge = +1 """ 
+		self.useCharge = useCharge
+	
+	def getUseRealCharge(self):
+		""" If useCharge != 1 the trackBunch(...) method will assume the charge = +1 """ 
+		return self.useCharge		
 
 
 class _teapotFactory:
@@ -246,23 +347,22 @@ class _teapotFactory:
             if(params.has_key("k3")):
                 k3 = params["k3"]
                 params["k3l"] = k3*length
-    # ===========QUAD quadrupole element =====================
+		# ===========QUAD quadrupole element =====================
         if(madElem.getType().lower()  == "quad" or \
-            madElem.getType().lower()  == "quadrupole"):
+			 madElem.getType().lower()  == "quadrupole"):
             elem = QuadTEAPOT(madElem.getName())
             kq = 0.
-            if params.has_key("k1"):
+            if(params.has_key("k1")):
                 kq = params["k1"]
-            # Added skew support - nilanjan@fnal.gov, 04/27/23
-            elif params.has_key("k1s"): 
+            elif params.has_key("k1s"): # Added skew support - nilanjan@fnal.gov, 04/27/23
                 kq = params["k1s"] # Use as normal quad strength
                 if abs(kq) > 1e-9: # An arbitrary threshold
                     tilt = True # Activate tilt
             elem.addParam("kq",kq)
-            if(tilt):
+            if(tilt): # For a skew quad add the tilt
                 if(tiltAngle == None):
-                    tiltAngle = math.math.pi/4.0
-    # ===========Sextupole element =====================
+                    tiltAngle = math.pi/4.0
+		# ===========Sextupole element =====================
         if(madElem.getType().lower()  == "sextupole"):
 			elem = MultipoleTEAPOT(madElem.getName())
 			k2 = 0.
@@ -934,6 +1034,9 @@ class BendTEAPOT(NodeTEAPOT):
 		self.addParam("theta",1.0e-36)
 		
 		self.setnParts(2)
+
+		# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
+		self.nonlineartransportflag = False
 		
 		def fringeIN(node,paramsDict):
 			usageIN = node.getUsage()
@@ -1016,6 +1119,23 @@ class BendTEAPOT(NodeTEAPOT):
 
 		self.setType("bend teapot")
 
+	# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
+	def setUsageNonlinearTransport(self,usage = True):
+		"""
+		Sets the property describing if the non-linear
+		transport terms depending on px, py and dE will
+		be used in calculation.
+		"""
+		self.nonlineartransportflag = usage
+
+	def getUsageNonlinearTransport(self):
+		"""
+		Sets the property describing if the non-linear
+		transport terms depending on px, py and dE will
+		be used in calculation.
+		"""
+		return self.nonlineartransportflag
+
 	def initialize(self):
 		"""
 		The  Bend Combined Functions TEAPOT class implementation of
@@ -1063,29 +1183,37 @@ class BendTEAPOT(NodeTEAPOT):
 			return
 		if(index > 0 and index < (nParts-1)):
 			TPB.bend2(bunch, length/2.0)
-			TPB.bend3(bunch, theta/2.0)
-			TPB.bend4(bunch,theta/2.0)
+			# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
+			if self.nonlineartransportflag:
+				TPB.bend3(bunch, theta/2.0)
+				TPB.bend4(bunch,theta/2.0)
 			for i in xrange(len(poleArr)):
 				pole = poleArr[i]
 				kl = klArr[i]/(nParts - 1)
 				skew = skewArr[i]
 				TPB.multp(bunch,pole,kl,skew,useCharge)
-			TPB.bend4(bunch,theta/2.0)
-			TPB.bend3(bunch,theta/2.0)
+			# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
+			if self.nonlineartransportflag:
+				TPB.bend4(bunch,theta/2.0)
+				TPB.bend3(bunch,theta/2.0)
 			TPB.bend2(bunch,length/2.0)
 			TPB.bend1(bunch,length,theta)
 			return
 		if(index == (nParts-1)):
 			TPB.bend2(bunch, length)
-			TPB.bend3(bunch, theta/2.0)
-			TPB.bend4(bunch, theta/2.0)
+			# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
+			if self.nonlineartransportflag:
+				TPB.bend3(bunch, theta/2.0)
+				TPB.bend4(bunch, theta/2.0)
 			for i in xrange(len(poleArr)):
 				pole = poleArr[i]
 				kl = klArr[i]/(nParts - 1)
 				skew = skewArr[i]
 				TPB.multp(bunch,pole,kl,skew,useCharge)
-			TPB.bend4(bunch, theta/2.0)
-			TPB.bend3(bunch, theta/2.0)
+			# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
+			if self.nonlineartransportflag:
+				TPB.bend4(bunch, theta/2.0)
+				TPB.bend3(bunch, theta/2.0)
 			TPB.bend2(bunch, length)
 			TPB.bend1(bunch, length, theta/2.0)
 		return
