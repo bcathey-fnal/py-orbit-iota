@@ -44,7 +44,7 @@ extern "C" {
         BunchTwissAnalysis* cpp_BunchTwissAnalysis = (BunchTwissAnalysis*)((pyORBIT_Object*) self)->cpp_obj;
 		// Declare the python objects: transformation matrix, single row of matrix, bunch
         PyObject *pyT = NULL, *pyTrow = NULL, *pyBunch = NULL, *pyD = NULL;
-        // Validate arguments. Updated to include dispersion compensation. - nilanjan@fnal.gov, 07/16/24
+        // Validate arguments
 		if(!PyArg_ParseTuple(args,"O|O!O!:analyzeBunch",&pyBunch, &PyList_Type, &pyT, &PyList_Type, &pyD)){
 			ORBIT_MPI_Finalize("BunchTwissAnalysis - analyzeBunch(bunch, T, D) - Bunch is needed for analysis. T if provided must be a 4x4 python list object. D if provided must be a list with 4 doubles.");
 		}

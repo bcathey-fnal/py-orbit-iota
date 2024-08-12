@@ -11,7 +11,9 @@ from orbit.lattice import AccLattice, AccNode, AccActionsContainer, AccNodeBunch
 # import the monitoring accelerator node constructor
 from ext.monitoring.monitoringAccNodes import Monitoring_Base_AccNode
 
-def setMonitoring_General_AccNodes(lattice, monitoring_ele_names, monitoring_length_min, monitoring_calculator, monitoring_NodeConstructor = None, insert_middle=False):
+def setMonitoring_General_AccNodes(lattice, monitoring_ele_names,
+        monitoring_length_min, monitoring_calculator,
+        monitoring_NodeConstructor=None, insert_middle=False, monitoring_ele_types='any'):
     """
     It will put a set of a monitoring nodes into the lattice as child nodes of the first level accelerator nodes.
     The monitoring nodes will be inserted at the beginning of the part closest to the middle of the first level
@@ -67,6 +69,7 @@ def setMonitoring_General_AccNodes(lattice, monitoring_ele_names, monitoring_len
     # Now we put the requested monitoring nodes as a children of accNodes
     ele_index_beg = ele_index_end = 0 # Keep track of the current element
     ele_name = nodes_arr[0][0].getName() # Current element name
+    ele_type = nodes_arr[0][0].getType() # Current element type
     for inode in range(len(nodes_arr)):
         # Get details of the current and next node in the list
         (accNode, part_index, position, path_length) = nodes_arr[inode]
@@ -80,12 +83,17 @@ def setMonitoring_General_AccNodes(lattice, monitoring_ele_names, monitoring_len
             ele_index_end = inode # This is the end of the element
             # Now that we have completely identified an element let's process
             # Check whether all elements are selected, or this one is selected
-            if monitoring_ele_names == 'all' or (len(monitoring_ele_names) and ele_name in monitoring_ele_names):
+            # Also verify the type of the element
+            if (monitoring_ele_names == 'all' or\
+                (len(monitoring_ele_names) and ele_name in monitoring_ele_names)) and\
+                (monitoring_ele_types == 'any' or\
+                (len(monitoring_ele_types) and ele_type in monitoring_ele_types)):
+
                 if insert_middle: # Do we need to insert in the middle
 			        # Find the ideal mid-point position in the element
 			        ele_part_pos_middle = 0.5*(nodes_arr[ele_index_beg][2] + positionNext)
                 else:
-                    ele_part_pos_middle = 0 # Make sure the insert posituion is at the start of the element
+                    ele_part_pos_middle = 0 # Make sure the insert position is at the start of the element
 
                 # By default the monitor will be inserted at the beginning
                 mon_insert_index = ele_index_beg
@@ -107,5 +115,6 @@ def setMonitoring_General_AccNodes(lattice, monitoring_ele_names, monitoring_len
         if inode < len(nodes_arr)-1:
             ele_index_beg = inode+1 # Mark the position of the new element
             ele_name = accNodeNext.getName() # Save the name
+            ele_type = accNodeNext.getType() # Save the type
 
     return monNodes_arr

@@ -45,8 +45,7 @@ BunchTwissAnalysis::~BunchTwissAnalysis()
 	free(corr_arr_MPI);
 }
 
-/** Performs the Twiss analysis of the bunch */
-// Added dispersion compensation support - nilanjan@fnal.gov, 07/16/24
+/** Performs the Twiss analysis of the bunch */		
 void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4], double *D){
 
     // Gather some important parameters
@@ -70,7 +69,7 @@ void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4], double *D){
 		}	
 	}
 
-    // Initialize the dispersion vector - nilanjan@fnal.gov, 07/16/24
+    // Initialize the dispersion vector
     double D6[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     if(D) // Copy the transverse dispersion
     {
@@ -103,7 +102,7 @@ void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4], double *D){
             int icoord;
             for(icoord=0; icoord < 6; icoord++)
             {
-                // Compensate for dispersion - nilanjan@fnal.gov, 07/16/24
+                // Compensate for dispersion
                 part_coord_arr_nodisp[icoord] = part_coord_arr[ip][icoord] - D6[icoord]*part_coord_arr[ip][5];
                 part_coord_arr_rotated[icoord] = part_coord_arr_nodisp[icoord];
             }
@@ -133,7 +132,7 @@ void BunchTwissAnalysis::analyzeBunch(Bunch* bunch, double T[][4], double *D){
             int icoord;
             for(icoord=0; icoord < 6; icoord++)
             {
-                // Compensate for dispersion - nilanjan@fnal.gov, 07/16/24
+                // Compensate for dispersion
                 part_coord_arr_nodisp[icoord] = part_coord_arr[ip][icoord] - D6[icoord]*part_coord_arr[ip][5];
                 part_coord_arr_rotated[icoord] = part_coord_arr_nodisp[icoord];
             }

@@ -29,7 +29,7 @@ def setTuneDetectorAccNodes(lattice, tunedetector_instance, bunch, verbosity):
     # tune detector nodes and save the array. The transform matrices
     # for each node will be added later.
     tdNodes_arr = setMonitoring_General_AccNodes(lattice, 'all', 0.01,
-            tunedetector_instance, TuneDetector_AccNode)
+            tunedetector_instance, TuneDetector_AccNode, monitoring_ele_types=['drift teapot'])
 
     tdNodes_arr[0].isFirst(True) # mark the first tune detector node
 
@@ -50,7 +50,8 @@ def setTuneDetectorAccNodes(lattice, tunedetector_instance, bunch, verbosity):
                     matrixNode_name_parts[1] == tdNode_name_parts[1]:
                     # Obtain the mode transform matrix for the lattice element
                     tdNodes_arr[tdNode_arr_cnt].setTmode(
-                                    matrixNode.getParam('Vinv'))
+                                    matrixNode.getParam('Vinv'),
+                                    matrixNode.getParam('T'))
                     if verbosity > 1:
                         print('{} matched with {}'.format(
                             matrixNode.getName(),

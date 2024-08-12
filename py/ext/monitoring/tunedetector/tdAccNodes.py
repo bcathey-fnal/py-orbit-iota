@@ -21,14 +21,25 @@ class TuneDetector_AccNode(Monitoring_Base_AccNode):
         Constructor. Creates the tunedetector node element.
         """
         Monitoring_Base_AccNode.__init__(self, monitoring_calc, "TuneDetector", name)
-        self.Tmode = np.eye(4).tolist()
+        self.setTmode(np.eye(4), np.zeros((6,6)))
         self.isfirst = False
 
-    def setTmode(self, Tmode):
+    def setTmode(self, Vinv, T):
         """
-        Set the transform matrix for the node. By default it's identitity.
+        Set the transform matrix for the node. By default it's identity.
+        
+        Parameters:
+        - Vinv: 4x4 matrix to transform into normal mode coordinates.
+        - T: 6x6 one-turn matrix of the linear lattice at the position.
+
+        Returns: None
         """
-        self.Tmode = Tmode.tolist()
+        # Calculate the dispersion vector from the one-turn matrix
+        Dvec = np.dot(np.linalg.inv(np.eye(4) - T[:4,:4]), T[0:4,5])
+        Tmode = np.zeros((4,5)) # prepare a 4x5 matrix
+        Tmode[:,:4] = Vinv # Assign the Floquet matrix
+        Tmode[:,4] = Dvec*0.0 # Assign the dispersion vector
+        self.Tmode = Tmode.tolist() # Convert the numpy array to a list
 
     def isFirst(self, isfirst):
         """
