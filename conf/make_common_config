@@ -9,7 +9,7 @@ LIBS += $(PYTHON_ROOT_LIB)
 LIBS += -ldl -lpthread -lutil -lm -Xlinker
 
 # FFTW library
-FFTW_LIBS = -L${FFTW_LIB} -lfftw3
+FFTW_LIBS = -lfftw3
 LIBS += $(EXTRA_LIB) ${FFTW_LIBS} -lz
 # GNU Scientific library
 LIBS += -lgsl -lgslcblas
@@ -20,7 +20,6 @@ LIBS += -lgsl -lgslcblas
 #-------------------------------------------------------------------------------
 
 # Headers for FFTW and library
-INCLUDES += -I${FFTW_INC}
 
 #-------------------------------------------------------------------------------
 # PYTHON_ROOT_INC - specify the location of the python header files.

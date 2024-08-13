@@ -20,9 +20,6 @@ INC += $(wildcard *.h)
 INC += $(foreach dir,$(DIRS),$(wildcard ./$(dir)/*.hh))
 INC += $(foreach dir,$(DIRS),$(wildcard ./$(dir)/*.h))
 
-# Add the GNU Scientific library
-#LIBS += -lgsl -lgslcblas
-#INCLUDES += -I$($(CONDA_PREFIX)/include)
 
 # Wrappers CC FLAGS
 WRAPPER_FLAGS = -fno-strict-aliasing

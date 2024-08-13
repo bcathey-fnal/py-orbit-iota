@@ -18,13 +18,13 @@ All installation steps happen in command line (terminal).
 ```shell
 sudo apt update
 sudo apt install build-essential
-sudo apt install python2-dev libmpich-dev libfftw3-dev libgsl-dev
+sudo apt install python2-dev python-pip libmpich-dev libfftw3-dev libgsl-dev zlib1g-dev
 ```
 The python2-dev package providing Python 2.7.18 is no longer available beyond Ubuntu 22.04 LTS. In this case install it manually as follows:
 
 a. Install important Python2.7.18 dependencies.
 ```shell
-sudo apt install libssl-dev libbz2-dev libffi-dev zlib1g-dev libhdf5-dev libpkgconf-dev
+sudo apt install libssl-dev libbz2-dev libffi-dev libhdf5-dev libpkgconf-dev
 ```
 b. Download the source and extract archive to a suitable directory.
 ```shell
@@ -74,6 +74,17 @@ make
 ```
 The first time, make will fail to build the PyORBIT executable but should succeed in everything else. This is because the main executable requires all object files for the extensions be already built. Once make is invoked a second time, it should succeed in building the executable. If make fails, it usually means that some of the libraries aren't set up properly.
 
+An alternate method of installing pyorbit is through a [Docker][https://www.docker.com] container. Once Docker is installed on the machine, build the image.
+```shell
+git clone https://github.com/bcathey-fnal/py-orbit-iota.git
+cd py-orbit-iota
+docker build -t pyorbit .
+```
+Once its built, the container can be started as follows:
+```shell
+docker run --mount type=bind,source="/path/to/run/directoy",target=/runs -it pyorbit /bin/bash
+```
+Replace /path/to/run/directory with the path in which the run scripts are located. This directory can be accessed in /runs from inside the container. The above command will start a shell which can be used to run pyORBIT.
 
 # Running Examples
 Setup the environment variables (needs to be done once per teminal session) using *setupEnvironment.sh*. Alternatively you can place run the script in your *.bashrc*.
