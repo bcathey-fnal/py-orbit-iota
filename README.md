@@ -74,7 +74,7 @@ make
 ```
 The first time, make will fail to build the PyORBIT executable but should succeed in everything else. This is because the main executable requires all object files for the extensions be already built. Once make is invoked a second time, it should succeed in building the executable. If make fails, it usually means that some of the libraries aren't set up properly.
 
-An alternate method of installing pyorbit is through a [Docker][https://www.docker.com] container. Once Docker is installed on the machine, build the image.
+An alternate method of installing pyorbit is through a [Docker](https://www.docker.com) container. Once Docker is installed on the machine, build the image.
 ```shell
 git clone https://github.com/bcathey-fnal/py-orbit-iota.git
 cd py-orbit-iota
