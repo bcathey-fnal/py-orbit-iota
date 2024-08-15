@@ -6,4 +6,4 @@ RUN apt install -y build-essential vim python2-dev python-pip libmpich-dev libff
 RUN pip2 install numpy Cython==0.29.37 pkgconfig
 RUN bash -c "cd /pyORBIT; source setupEnvironment.sh; make clean; make; make"
 RUN chmod 777 /pyORBIT/bin/pyorbit
-RUN alias pyorbit=/pyORBIT/bin/pyorbit
+RUN echo "alias pyorbit=/pyORBIT/bin/pyorbit" > ~/.bash_aliases
