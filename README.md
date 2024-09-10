@@ -5,6 +5,7 @@ This is forked from the original [Py-ORBIT repo](https://github.com/PyORBIT-Coll
 2. Thick McMillan lens
 3. Electron cooling
 4. Custom diagnostics
+5. Analytical space-charge model for Gaussian beams - copied from Hannes Bartosik's repo [py-orbit](https://github.com/hannes-bartosik/py-orbit)
 
 These features have been very useful in simulating the [Integrable Optics Test Accelerator](https://fast.fnal.gov/)
 
