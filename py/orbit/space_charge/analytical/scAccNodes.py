@@ -24,7 +24,7 @@ class SCanalyticalAccNode(SC_Base_AccNode):
 	"""
 	The subclass of the AccNodeBunchTracker class. It uses SpaceChargeFrozen wrapper for the c++ space charge calculator.
 	"""
-	def __init__(self, sc_calculator, lattice_functions, name = "no name"):	
+	def __init__(self, sc_calculator, name = "no name"):	
 		"""
 		Constructor. Creates the SC accelerator node element.
 		"""
