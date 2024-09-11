@@ -16,6 +16,10 @@
 #include "wrap_lspacechargecalc.hh"
 #include "wrap_uniform_ellipsoid_field_calculator.hh"
 #include "wrap_spacechargecalc_uniform_ellipse.hh"
+#include "wrap_spacechargecalc_analytic_gaussian.hh"
+#include "wrap_linedensityprofile_gaussian.hh"
+#include "wrap_linedensityprofile_constant.hh"
+#include "wrap_linedensityprofile_interpolated.hh"
 
 static PyMethodDef spacechargeMethods[] = { {NULL,NULL} };
 
@@ -42,6 +46,10 @@ extern "C" {
 		wrap_spacecharge::initUniformEllipsoidFieldCalculator(module);
 		wrap_spacecharge::initSpaceChargeCalcUniformEllipse(module);
 		wrap_lspacechargecalc::initLSpaceChargeCalc(module);
+		wrap_spacecharge::initSpaceChargeCalcAnalyticGaussian(module);
+		wrap_spacecharge::initGaussianLineDensityProfile(module);
+		wrap_spacecharge::initConstantLineDensityProfile(module);
+		wrap_spacecharge::initInterpolatedLineDensityProfile(module);
   }
 	
 	PyObject* getSpaceChargeType(const char* name){
