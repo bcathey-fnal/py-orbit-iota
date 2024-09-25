@@ -55,6 +55,6 @@ def setSCanalyticalAccNodes(lattice, sc_path_length_min,
 		# Save them into the space-charge node
 		scNode.set_lattice_functions(lattice_functions)
 		scNode.setName(scNode.getName()+"FrozenSC") # Edit the node name
-		s += scNode.getLength() # update the position
+		s += scNode.getLengthOfSC() # update the position
 	lattice.initialize() # initialize the lattice
 	return scNodes_arr
