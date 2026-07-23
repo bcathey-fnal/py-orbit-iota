@@ -2,7 +2,7 @@ FROM ubuntu
 RUN apt update && apt install -y build-essential vim wget git libreadline-dev \
 	libsqlite3-dev libbz2-dev libgdbm-dev libncurses5-dev libssl-dev \
 	libnsl-dev libdb-dev libmpich-dev libfftw3-dev libgsl-dev zlib1g-dev \
-	libhdf5-dev libpkgconf-dev
+	libhdf5-dev libpkgconf-dev liblapack-dev libopenblas-dev gfortran
 WORKDIR /python2
 RUN wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz && \
 	tar -xzvf Python-2.7.18.tgz
@@ -15,7 +15,11 @@ RUN ./configure --enable-optimizations --enable-shared CFLAGS="-std=gnu17" && \
 RUN ldconfig
 RUN ln -s /usr/local/bin/python2.7 /usr/local/bin/python2
 RUN python2 -m ensurepip --upgrade
-RUN pip2 install numpy Cython==0.29.37 pkgconfig scipy
+RUN pip2 install numpy Cython==0.29.37 pkgconfig
+ENV FFLAGS="-fallow-argument-mismatch"
+ENV FCFLAGS="-fallow-argument-mismatch"
+ENV CFLAGS="-Wno-error=implicit-function-declaration -Wno-error=implicit-int -Wno-error=incompatible-pointer-types"
+RUN pip2 install scipy
 WORKDIR /py-orbit-iota
 ADD . /py-orbit-iota
 RUN bash -c "source setupEnvironment.sh && make clean && make; make"
