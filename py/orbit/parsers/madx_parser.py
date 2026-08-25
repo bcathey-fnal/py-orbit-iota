@@ -510,6 +510,39 @@ class MADX_Parser:
                     if self.verbosity:
                         print "Warning: Lattice parsing resulted in a lattice with length longer than specified by sequence command."
 
+        # Post processing: an element with an aperture puts an aperture node at its
+        # entry and at its exit, so two touching elements leave two aperture nodes
+        # in a row. In such a run only the restrictive nodes have to survive, the
+        # ones a particle can not be lost on are dropped. Circle, ellipse and
+        # rectangle are compared, a run holding any other shape is left alone.
+        # -nilanjan@fnal.gov 08/25/2026
+        sequence_reduced = []
+        for latt_elem in self._sequencelist:
+            elem_aper = self.getApertureHalfSizes(latt_elem)
+            keep_elem = True
+            # the run of consecutive apertures can be longer than two
+            while elem_aper and sequence_reduced:
+                prev_aper = self.getApertureHalfSizes(sequence_reduced[-1])
+                if not prev_aper:
+                    # not an aperture, or a shape we do not compare
+                    break
+                if prev_aper[0] <= elem_aper[0] and prev_aper[1] <= elem_aper[1]:
+                    # the aperture upstream is at least as restrictive
+                    keep_elem = False
+                    break
+                if elem_aper[0] <= prev_aper[0] and elem_aper[1] <= prev_aper[1]:
+                    # this aperture is the restrictive one
+                    sequence_reduced.pop()
+                    aper_warning = aper_warning - 1
+                    continue
+                # neither of them is more restrictive in both planes, keep both
+                break
+            if keep_elem:
+                sequence_reduced.append(latt_elem)
+            else:
+                aper_warning = aper_warning - 1
+        self._sequencelist = sequence_reduced
+
         if aper_warning >= 1 and self.verbosity:
             print "Warning, adding", aper_warning, "aperture nodes to the teapot lattice. That will slow down the simluation."
             print "If the lost of particles on the aperture is not necessary, please use a madx file without the aperture labels."
@@ -843,6 +876,33 @@ class MADX_Parser:
         lattElem.addParameter(name, dim)
         lattElem.addParameter(type_local, shape)
         return lattElem
+
+    def getApertureHalfSizes(self, latt_elem):
+        """
+        Method. Returns the (x,y) half sizes of an aperture node: the radius for a
+        circle, the semi-axes for an ellipse, the half lengths for a rectangle.
+        Returns None for anything else, an element which is not an aperture node
+        or an aperture of a shape we do not compare. -nilanjan@fnal.gov 08/25/2026
+        """
+        if latt_elem.getType().lower() != "aperture":
+            return None
+        if not (latt_elem.hasParameter("apertype") and latt_elem.hasParameter("aperture")):
+            return None
+        # the shape codes are the ones makeAperture puts on the node
+        shape = latt_elem.getParameter("apertype")
+        if shape not in (1, 2, 3):  # circle, ellipse, rectangle
+            return None
+        dim = latt_elem.getParameter("aperture")
+        if not isinstance(dim, (list, tuple)):
+            dim = [dim]
+        try:
+            if shape == 1 or len(dim) < 2:  # circle, one radius for both planes
+                return (float(dim[0]), float(dim[0]))
+            return (float(dim[0]), float(dim[1]))
+        except (IndexError, TypeError, ValueError):
+            if self.verbosity:
+                print "Warning: Can not read the aperture of", latt_elem.getName(), dim
+            return None
 
     def getSequenceName(self):
         """
