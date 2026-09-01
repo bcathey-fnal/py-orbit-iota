@@ -680,13 +680,31 @@ class ApertureTEAPOT(NodeTEAPOT):
 	
 		shape = self.getParam("apertype")
 		dim = self.getParam("aperture")
-		if len(dim) > 0:
-			if shape == 1:
-				self.aperture = Aperture(shape, dim[0], 0.0, 0.0, 0.0)
-			if shape == 2:
-				self.aperture = Aperture(shape, dim[0], dim[1], 0.0, 0.0)
-			if shape == 3:
-				self.aperture = Aperture(shape, dim[0], dim[1], 0.0, 0.0)
+		# The Aperture constructor takes the position of the node in the
+		# lattice as its last argument and stamps it on every particle it
+		# loses. That position is not known while the node is being built,
+		# so it is put in as a node parameter afterwards. Reading it here
+		# rather than calling Aperture.setPosition is what keeps it through
+		# the rebuild that every AccLattice.initialize() does.
+		# -nilanjan@fnal.gov 08/31/2026
+		pos = 0.0
+		if self.hasParam("pos"):
+			pos = self.getParam("pos")
+		if len(dim) == 0:
+			# The node is still being constructed, the shape and the sizes
+			# are put in after that. -nilanjan@fnal.gov 08/31/2026
+			return
+		if shape == 1:
+			self.aperture = Aperture(shape, dim[0], 0.0, 0.0, 0.0, pos)
+		elif shape == 2 or shape == 3:
+			self.aperture = Aperture(shape, dim[0], dim[1], 0.0, 0.0, pos)
+		else:
+			# Falling through used to leave the node without an aperture and
+			# the run died on a missing attribute much later, while tracking.
+			# -nilanjan@fnal.gov 08/31/2026
+			msg = "The ApertureTEAPOT node " + self.getName() + \
+				" has an unsupported aperture shape " + str(shape) + "."
+			orbitFinalize(msg)
 
 	def track(self, paramsDict):
 		"""
