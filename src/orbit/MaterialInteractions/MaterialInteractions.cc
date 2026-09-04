@@ -74,9 +74,9 @@ void MaterialInteractions::mcsJackson(double stepsize, double z, double a, doubl
 	double pi = OrbitConst::PI;
 	double cvel = OrbitConst::c * 100.0;
 	double eesu = OrbitConst::elementary_charge_CGS;
-	double hbar = 1.05443e-27;
-	double AMU = 1.65979e-24;
-	double aBohr = 5.29172e-09;
+	double hbar = 1.0545718176e-27;
+	double AMU = 1.66053906892e-24;
+	double aBohr = 5.29177210544e-09;
 	double AP = 1.007593;
 	double gamma = 1.0 / sqrt(1.0 - beta * beta);
 	
@@ -172,9 +172,9 @@ double MaterialInteractions::ruthScattJackson(double stepsize, double z, double 
 	double pi = OrbitConst::PI;
 	double cvel = OrbitConst::c * 100.0;
 	double eesu = OrbitConst::elementary_charge_CGS;
-	double hbar = 1.05443e-27;
-	double AMU = 1.65979e-24;
-	double aBohr = 5.29172e-09;
+	double hbar = 1.0545718176e-27;
+	double AMU = 1.66053906892e-24;
+	double aBohr = 5.29177210544e-09;
 	double AP = 1.007593;
 	double gamma = 1.0 / sqrt(1.0 - beta * beta);
 	
@@ -370,7 +370,7 @@ double MaterialInteractions::elastic_t(double p, double a, long& idum)
 
 double MaterialInteractions::ionEnergyLoss(double beta, double z, double a)
 { 
-	double dE, gamma, T_max, m_e=.511, M=938.27, I, arg;
+	double dE, gamma, T_max, m_e=0.51099895069, M=938.27208943, I, arg;
 	
 	I=z*10.;
 	gamma=1/sqrt(1-beta*beta);                  

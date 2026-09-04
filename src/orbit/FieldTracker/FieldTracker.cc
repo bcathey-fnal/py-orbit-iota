@@ -175,8 +175,8 @@ void FieldTracker::trackBunch(Bunch* b) {
 
 
         pMomentum = sqrt(eTotal*eTotal - (syncPart->getMass()*syncPart->getEnergy())*(syncPart->getMass()*syncPart->getEnergy()));
-        double e = 1.602e-19;
-	    double amu = 1.66053886e-27;
+        double e = 1.602176634e-19;
+	    double amu = 1.66053906892e-27;
 	    double fac = e * 1.0e9 * pMomentum / OrbitConst::c;
 
 	    coeff = 1.e-09 * OrbitConst::c * OrbitConst::charge_electron / pMomentum;

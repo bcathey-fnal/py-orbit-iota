@@ -37,7 +37,7 @@
 
 // Hard coded parameters
 // Physical constants
-#define kB 1.38064852e-23 // Boltzmann constant in J/K
+#define kB 1.380649e-23 // Boltzmann constant in J/K
 #define r_ec_sqr (OrbitConst::classicalRadius_electron*OrbitConst::c*OrbitConst::c)
 // Non magnetic cooling look up table parameters, normalized to \sigma_v
 #define NM_LUT_VELOCITY_LINEAR 0.001 // Normalized velocity used for linear force estimates

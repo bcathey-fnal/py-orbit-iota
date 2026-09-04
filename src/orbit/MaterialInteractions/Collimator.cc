@@ -66,7 +66,7 @@ Collimator::Collimator(double length, int ma,
 void Collimator::collimateBunch(Bunch* bunch, Bunch* lostbunch){
 	
 	int j = 1, coll_flag = 0, lastArg, trackit;
-	double nAvogadro = 6.022045e23;
+	double nAvogadro = 6.02214076e23;
 	double random, choice, length, dlength, meanfreepath, b_pN;
 	double rl, zrl, stepsize, smallstep, radlengthfac, directionfac;
 	double t, dp_x=0.0, dp_y=0.0, thx = 0.0, thy = 0.0;

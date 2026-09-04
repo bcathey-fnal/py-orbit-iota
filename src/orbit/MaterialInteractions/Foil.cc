@@ -63,12 +63,12 @@ Foil::Foil(double xmin, double xmax, double ymin, double ymax, double thick): Cp
 
 void Foil::traverseFoilSimpleScatter(Bunch* bunch){
 
-	double BohrRadius=0.52917706e-8;  // hydrogenic Bohr radius in cm
-	double hBar = 1.054571817e-27;    // Planck's constant in erg-sec
-	double echarge = 4.80320425e-10;  // in esu or statcoulombs
-	double nAvogadro = 6.0221408e23;
+	double BohrRadius=0.529177210544e-8;  // hydrogenic Bohr radius in cm
+	double hBar = 1.0545718176e-27;    // Planck's constant in erg-sec
+	double echarge = 4.803204712570263e-10;  // in esu or statcoulombs
+	double nAvogadro = 6.02214076e23;
 	double muScatter = 1.35;
-	double emass = 9.1093837e-28;
+	double emass = 9.1093837139e-28;
 	double pInj0;
 	long idum = (unsigned)time(0);
 	idum = -idum;
@@ -172,7 +172,7 @@ void Foil::traverseFoilSimpleScatter(Bunch* bunch){
 void Foil::traverseFoilFullScatter(Bunch* bunch, Bunch* lostbunch){
 
 	int j = 1, foil_flag = 0, lastArg, trackit;
-	double nAvogadro = 6.022045e23;
+	double nAvogadro = 6.02214076e23;
 	double random, choice, length, dlength, meanfreepath;
 	double rl, zrl, stepsize, radlengthfac, directionfac;
 	double t, dp_x=0.0, dp_y=0.0, thx = 0.0, thy = 0.0;

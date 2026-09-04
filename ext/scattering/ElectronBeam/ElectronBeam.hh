@@ -19,10 +19,10 @@
 #include "OrbitConst.hh"
 
 // More physical constants
-#define kB 1.38064852e-23 // Boltzmann constant in J/K
-#define epsilon_0 8.8541878128e-12 // Vacuum permittivity in C^2/(Nm^2)
-#define mass_electron_MKS 9.109383702e-31 // Electron mass in kg
-#define one_over_4pi_episilon_0 8.98755179e9 // (Nm^2)/C^2
+#define kB 1.380649e-23 // Boltzmann constant in J/K
+#define epsilon_0 8.8541878188e-12 // Vacuum permittivity in C^2/(Nm^2)
+#define mass_electron_MKS 9.1093837139e-31 // Electron mass in kg
+#define one_over_4pi_episilon_0 8.987551786170797e9 // (Nm^2)/C^2
 
 // Electron cooler class
 class ElectronBeam: public OrbitUtils::CppPyWrapper
