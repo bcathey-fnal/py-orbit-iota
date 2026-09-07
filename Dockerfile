@@ -23,5 +23,5 @@ RUN pip2 install scipy
 WORKDIR /py-orbit-iota
 ADD . /py-orbit-iota
 RUN bash -c "source setupEnvironment.sh && make clean && make; make"
-RUN chmod 777 bin/pyorbit
-RUN ln -s /py-orbit-iota/bin/pyorbit /usr/local/bin/pyorbit
+RUN chmod 777 bin/pyorbit.sh
+RUN ln -s /py-orbit-iota/bin/pyorbit.sh /usr/local/bin/pyorbit
