@@ -3,5 +3,10 @@
 ######################################################################
 
 CXX             =  ${MPI_CPP}
-CXXFLAGS       += -g -O3 -DUSE_MPI=1  -I /opt/local/include
-LINKFLAGS      += -dynamic  -L/opt/local/lib
+CXXFLAGS       += -g -O3 -DUSE_MPI=1 -std=c++11
+# The shared libraries in lib/ are dlopened by the interpreter and resolve
+# their Python and ORBIT symbols out of this executable, which only works if
+# its symbol table is exported.  Prefix and library paths come in through
+# EXTRA_INCLUDE and EXTRA_LIB (see setupEnvironment.sh) rather than being
+# hardcoded to a MacPorts prefix. -nilanjan@fnal.gov 09/07/2026
+LINKFLAGS      += -Wl,-export_dynamic

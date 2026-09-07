@@ -4,4 +4,6 @@
 
 CXX             =  ${MPI_CPP}
 CXXFLAGS       += -g -fPIC -DUSE_MPI=1
-LINKFLAGS      += -fPIC -shared -Wl -undefined dynamic_lookup
+# Symbols left undefined here are the interpreter's own; they are bound when
+# the library is dlopened. -nilanjan@fnal.gov 09/07/2026
+LINKFLAGS      += -fPIC -shared -Wl,-undefined,dynamic_lookup
