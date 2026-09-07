@@ -347,6 +347,39 @@ extern "C"
         return Py_None;
     }
 
+    //Exact drift transport - nilanjan@fnal.gov, 09/07/2026
+    static PyObject* wrap_driftexact(PyObject *self, PyObject *args)
+    {
+        PyObject* pyBunch;
+        double length;
+        if(!PyArg_ParseTuple(	args, "Od:driftexact",
+                             &pyBunch, &length))
+        {
+            error("teapotbase - driftexact - cannot parse arguments!");
+        }
+        Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object *) pyBunch)->cpp_obj;
+        teapot_base::driftexact(cpp_bunch, length);
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
+    //Exact sector bend transport - nilanjan@fnal.gov, 09/07/2026
+    static PyObject* wrap_bendexact(PyObject *self, PyObject *args)
+    {
+        PyObject* pyBunch;
+        double length;
+        double th;
+        if(!PyArg_ParseTuple(	args, "Odd:bendexact",
+                             &pyBunch, &length, &th))
+        {
+            error("teapotbase - bendexact - cannot parse arguments!");
+        }
+        Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object *) pyBunch)->cpp_obj;
+        teapot_base::bendexact(cpp_bunch, length, th);
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
     //Hard edge fringe field for a bend IN
     static PyObject* wrap_bendfringeIN(PyObject *self, PyObject *args)
     {
@@ -521,6 +554,8 @@ extern "C"
 			{"bend2",            wrap_bend2,          METH_VARARGS, "Kinetic bend transport (same as nonlinear quad transport - quad2) "},
 			{"bend3",            wrap_bend3,          METH_VARARGS, "Nonlinear curvature bend transport depending on py and dE in Hamiltonian "},
 			{"bend4",            wrap_bend4,          METH_VARARGS, "Nonlinear curvature bend transport depending on px in Hamiltonian "},
+			{"driftexact",       wrap_driftexact,     METH_VARARGS, "Exact drift transport, keeping the kinematic square root "},
+			{"bendexact",        wrap_bendexact,      METH_VARARGS, "Exact sector bend transport, keeping the kinematic square root "},
 			{"bendfringeIN",     wrap_bendfringeIN,   METH_VARARGS, "Hard edge fringe field for a bend IN"},
 			{"bendfringeOUT",    wrap_bendfringeOUT,  METH_VARARGS, "Hard edge fringe field for a bend OUT"},
 			{"soln",             wrap_soln,           METH_VARARGS, "Integration through a solenoid "},

@@ -64,6 +64,10 @@ namespace teapot_base
     void bendfringeIN(Bunch* bunch, double rho);
     void bendfringeOUT(Bunch* bunch, double rho);
 
+    // Exact-Hamiltonian sector bend and drift - nilanjan@fnal.gov, 09/07/2026
+    void driftexact(Bunch* bunch, double length);
+    void bendexact(Bunch* bunch, double length, double th);
+
     void soln(Bunch* bunch, double length, double B, int useCharge);
 
     void wedgebendCF(Bunch* bunch, double e, int inout,

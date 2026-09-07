@@ -37,6 +37,7 @@
 #include "SyncPart.hh"
 
 #include <complex>
+#include <cmath>
 
 namespace teapot_base
 {
@@ -1255,6 +1256,222 @@ void bend4(Bunch* bunch, double th)
         arr[i][0] *= xfac * xfac;
         arr[i][1] /= xfac;
         arr[i][4] -= th * phifac * arr[i][0];
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// NAME
+//   driftexact
+//
+// DESCRIPTION
+//   Exact drift transport. Where drift() uses the Hamiltonian of Eq. (8) of
+//   J. Holmes, "Single Particle Transport in ORBIT and pyORBIT" (2022), in
+//   which the kinematic square root is expanded to second order in the
+//   transverse momenta, this routine keeps the square root itself:
+//
+//     H = dE - sqrt(P^2 - px^2 - py^2),  P^2 = (1 + dE)^2 - dE^2 / gamma^2
+//
+//   where dE is the energy deviation scaled by beta^2 * E0 (the "dp_p" of the
+//   other routines) and P is the exact momentum in units of the design
+//   momentum. This is the th -> 0 limit of bendexact().
+//
+// PARAMETERS
+//   bunch  = reference to the macro-particle bunch
+//   length = length of transport
+//
+// RETURNS
+//   Nothing
+//
+// - nilanjan@fnal.gov, 09/07/2026
+///////////////////////////////////////////////////////////////////////////
+
+void driftexact(Bunch* bunch, double length)
+{
+    SyncPart* syncPart = bunch->getSyncPart();
+
+    double v = OrbitConst::c * syncPart->getBeta();
+    if(length > 0.)
+    {
+        syncPart->setTime(syncPart->getTime() + length / v);
+    }
+
+    double gamma2i = 1.0 / (syncPart->getGamma() * syncPart->getGamma());
+    double beta2 = 1.0 - gamma2i;
+    double dp_p_coeff = 1.0 / (syncPart->getMomentum() * syncPart->getBeta());
+    double dp_p, w, pm1, pz2, pz;
+
+    //coordinate array [part. index][x,xp,y,yp,z,dE]
+    double** arr = bunch->coordArr();
+
+    for(int i = 0; i < bunch->getSize(); i++)
+    {
+        dp_p = arr[i][5] * dp_p_coeff;
+
+        // pm1 = P^2 - 1 and w = d(P^2 / 2) / d(dE), both exact and both
+        // written so that they carry no cancellation for a small dE
+        pm1 = dp_p * (2.0 + beta2 * dp_p);
+        w   = 1.0 + beta2 * dp_p;
+
+        pz2 = 1.0 + pm1 - arr[i][1] * arr[i][1] - arr[i][3] * arr[i][3];
+        if(pz2 <= 0.0)
+        {
+            // the particle is not moving forward - it has no image under this map
+            bunch->deleteParticleFast(i);
+            continue;
+        }
+        pz = sqrt(pz2);
+
+        arr[i][0] += length * arr[i][1] / pz;
+        arr[i][2] += length * arr[i][3] / pz;
+        arr[i][4] += length * (pz - w) / pz;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// NAME
+//   bendexact
+//
+// DESCRIPTION
+//   Exact sector bend transport. This is the closed-form map of the full
+//   sector bend Hamiltonian, with the kinematic square root kept rather than
+//   expanded:
+//
+//     H = (r^2 - 1) / 2 + dE - r * sqrt(P^2 - px^2 - py^2),   r = 1 + x / rho
+//
+//   with P^2 = (1 + dE)^2 - dE^2 / gamma^2 the exact momentum in units of the
+//   design momentum. It replaces the combination bend1 + bend2 + bend3 + bend4,
+//   which together integrate the same Hamiltonian with the square root
+//   expanded to second order in px, py and dE / gamma. Because this map is
+//   exact, a pure sector dipole is transported exactly in a single step, with
+//   no dependence on the number of steps.
+//
+//   The motion is a circular arc: py, dE and pperp^2 = P^2 - py^2 are
+//   conserved. The map is that of ImpactX ExactCFbend's H_1, rewritten in the
+//   pyORBIT variables and regrouped so that no term suffers cancellation as
+//   the bend angle goes to zero, in which limit it reduces exactly to
+//   driftexact().
+//
+// PARAMETERS
+//   bunch  = reference to the macro-particle bunch
+//   length = length of transport
+//   th = bending angle
+//
+// RETURNS
+//   Nothing
+//
+// - nilanjan@fnal.gov, 09/07/2026
+///////////////////////////////////////////////////////////////////////////
+
+void bendexact(Bunch* bunch, double length, double th)
+{
+    // nothing is transported over a vanishing length
+    if(fabs(length) < OrbitConst::tiny) return;
+
+    // a bend with a vanishing angle is an exact drift
+    if(fabs(th) < OrbitConst::tiny)
+    {
+        driftexact(bunch, length);
+        return;
+    }
+
+    SyncPart* syncPart = bunch->getSyncPart();
+
+    double v = OrbitConst::c * syncPart->getBeta();
+    if(length > 0.)
+    {
+        syncPart->setTime(syncPart->getTime() + length / v);
+    }
+
+    double gamma2i = 1.0 / (syncPart->getGamma() * syncPart->getGamma());
+    double beta2 = 1.0 - gamma2i;
+    double dp_p_coeff = 1.0 / (syncPart->getMomentum() * syncPart->getBeta());
+
+    double rho = length / th;
+    double cx = cos(th);
+    double sx = sin(th);
+    double sh = sin(0.5 * th);
+
+    // rho * (1 - cos(th)) and rho * sin(th), formed without cancellation so
+    // that they stay accurate however small the bend angle of a step becomes
+    double rho_omc = 2.0 * rho * sh * sh;
+    double rho_sin = length * (sx / th);
+
+    // below one radian per step the two arcsines below are close enough that
+    // their difference must be taken through the arcsine addition identity
+    int smallAngle = (fabs(th) < 1.0) ? 1 : 0;
+
+    double dp_p, w, pm1, x, px, py2, pperp2, pperp;
+    double pzi, pzf, pzi2, pzf2, pzim1, pxout;
+    double rho_dpx, rho_dpz, rho_num, u, rho_dasin;
+
+    //coordinate array [part. index][x,xp,y,yp,z,dE]
+    double** arr = bunch->coordArr();
+
+    for(int i = 0; i < bunch->getSize(); i++)
+    {
+        dp_p = arr[i][5] * dp_p_coeff;
+
+        // pm1 = P^2 - 1 and w = d(P^2 / 2) / d(dE), both exact
+        pm1 = dp_p * (2.0 + beta2 * dp_p);
+        w   = 1.0 + beta2 * dp_p;
+
+        x   = arr[i][0];
+        px  = arr[i][1];
+        py2 = arr[i][3] * arr[i][3];
+
+        // pperp^2 = P^2 - py^2 is a constant of the motion, as are py and dE
+        pperp2 = 1.0 + pm1 - py2;
+        pzi2   = pperp2 - px * px;
+        if(pzi2 <= 0.0)
+        {
+            // the particle is not moving forward - it has no image under this map
+            bunch->deleteParticleFast(i);
+            continue;
+        }
+        pperp = sqrt(pperp2);
+        pzi   = sqrt(pzi2);
+
+        // pzi - 1 without cancellation
+        pzim1 = (pm1 - py2 - px * px) / (pzi + 1.0);
+
+        pxout = px * cx + (pzim1 - x / rho) * sx;
+        pzf2  = pperp2 - pxout * pxout;
+        if(pzf2 <= 0.0)
+        {
+            bunch->deleteParticleFast(i);
+            continue;
+        }
+        pzf = sqrt(pzf2);
+
+        // rho * (px - pxout) and rho * (pzf - pzi), both free of cancellation
+        rho_dpx = px * rho_omc - rho_sin * pzim1 + x * sx;
+        rho_dpz = rho_dpx * (px + pxout) / (pzf + pzi);
+
+        // rho * [asin(px / pperp) - asin(pxout / pperp)], the arc through
+        // which the momentum vector turns, less the design bend angle. The
+        // identity asin(a) - asin(b) = asin(a * sqrt(1 - b^2) - b * sqrt(1 - a^2))
+        // moves the cancellation inside the arcsine, where
+        // rho * (px * pzf - pxout * pzi) = px * rho_dpz + pzi * rho_dpx.
+        if(smallAngle)
+        {
+            rho_num = px * rho_dpz + pzi * rho_dpx;
+            u = rho_num / (rho * pperp2);
+            rho_dasin = (rho_num / pperp2) *
+                        ((fabs(u) < 1.0e-4) ? (1.0 + u * u / 6.0) : (asin(u) / u));
+        }
+        else
+        {
+            rho_dasin = rho * (asin(px / pperp) - asin(pxout / pperp));
+        }
+
+        // x_out = x cos(th) + rho (1 - cos(th)) (pzi - 1)
+        //         + rho (pzf - pzi) + rho px sin(th)
+        arr[i][0]  = x * cx + rho_omc * pzim1 + rho_dpz + rho_sin * px;
+        arr[i][1]  = pxout;
+        arr[i][2] += (length + rho_dasin) * arr[i][3];
+        // z picks up length - w * rho * theta, with theta the turned arc; the
+        // leading parts of the two terms cancel and are removed analytically
+        arr[i][4] += -length * beta2 * dp_p - w * rho_dasin;
     }
 }
 

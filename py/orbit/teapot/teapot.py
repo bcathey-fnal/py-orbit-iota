@@ -1055,6 +1055,9 @@ class BendTEAPOT(NodeTEAPOT):
 
 		# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
 		self.nonlineartransportflag = False
+
+		# Added a flag to switch to the exact sector bend map - nilanjan@fnal.gov, 09/07/2026
+		self.exacttransportflag = False
 		
 		def fringeIN(node,paramsDict):
 			usageIN = node.getUsage()
@@ -1154,6 +1157,24 @@ class BendTEAPOT(NodeTEAPOT):
 		"""
 		return self.nonlineartransportflag
 
+	# Added a flag to switch to the exact sector bend map - nilanjan@fnal.gov, 09/07/2026
+	def setUsageExactTransport(self,usage = True):
+		"""
+		Sets the property describing if the body of the bend will be
+		transported with the exact sector bend map, which keeps the
+		kinematic square root instead of expanding it. When it is set,
+		the bend1/bend2/bend3/bend4 splitting is not used, and the
+		setting of the non-linear transport flag is ignored.
+		"""
+		self.exacttransportflag = usage
+
+	def getUsageExactTransport(self):
+		"""
+		Returns the property describing if the body of the bend will be
+		transported with the exact sector bend map.
+		"""
+		return self.exacttransportflag
+
 	def initialize(self):
 		"""
 		The  Bend Combined Functions TEAPOT class implementation of
@@ -1196,6 +1217,23 @@ class BendTEAPOT(NodeTEAPOT):
 		useCharge = 1
 		if(paramsDict.has_key("useCharge")): useCharge = paramsDict["useCharge"]
 		theta = self.getParam("theta")/(nParts - 1)
+		# The exact sector bend map replaces the bend1 + bend2 + bend3 + bend4
+		# splitting of the body. The leapfrog is the same one the parts of this
+		# node already lay out: a half step, then (nParts - 2) kicks each
+		# followed by a full step, then a final kick and a half step.
+		# - nilanjan@fnal.gov, 09/07/2026
+		if self.exacttransportflag:
+			if(index > 0):
+				for i in xrange(len(poleArr)):
+					pole = poleArr[i]
+					kl = klArr[i]/(nParts - 1)
+					skew = skewArr[i]
+					TPB.multp(bunch,pole,kl,skew,useCharge)
+			if(index == 0 or index == (nParts - 1)):
+				TPB.bendexact(bunch, length, theta/2.0)
+			else:
+				TPB.bendexact(bunch, length, theta)
+			return
 		if(index == 0):
 			TPB.bend1(bunch, length, theta/2.0)
 			return
