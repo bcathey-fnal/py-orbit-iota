@@ -14,8 +14,50 @@ model (from Hannes Bartosik's fork).
 
 ## Build and run
 
-Every shell needs the environment first — it derives `ORBIT_ROOT`, `ORBIT_ARCH`, the Python library and
-include paths, `PYTHONPATH`, and `MPI_CPP`:
+Two supported routes: `conda/bootstrap.sh` (works on x86_64 and ARM64, uses a host MPI when there is
+one) and the Docker image. Both end up going through `setupEnvironment.sh` and the same Makefiles.
+
+### conda/mamba
+
+```shell
+./conda/bootstrap.sh          # --help for options; --skip-python to iterate on C++
+conda activate pyorbit2
+source setupEnvironment.sh
+```
+
+`conda/bootstrap.sh` probes the host *before* creating or activating anything, installs only what is
+missing, compiles CPython 2.7.18 (always — there is no conda python 2.7 for `osx-arm64`) and FFTW
+(when the host has none) from source into the environment, then builds pyORBIT. It records the
+interpreter, `mpicxx`, `EXTRA_INCLUDE`/`EXTRA_LIB` and any MPI runtime settings it had to choose in
+`$CONDA_PREFIX/etc/pyorbit/build.env`; `setupEnvironment.sh` sources that when the environment is
+active and behaves as before when it is not. `conda/README.md` has the details.
+
+The environment carries **both** interpreters: `python2.7`/`python2`/`pip2` are the from-source
+build pyORBIT uses, and `python`/`python3`/`pip` are the latest conda CPython 3 for analysis work.
+Python 2.7 is installed with `altinstall` so it never claims the bare names. The two need different
+OpenSSL majors — 2.7's `_ssl.c` uses `ERR_GET_FUNC`, removed in OpenSSL 3 — and an environment holds
+only one `openssl` package, so `conda/build-openssl.sh` builds a *static* 1.1.1 into
+`$CONDA_PREFIX/opt/openssl-1.1.1` that is linked straight into `_ssl` and `_hashlib`. Its include
+and library directories must precede the prefix' own in `CPPFLAGS`/`LDFLAGS`, since CPython's
+`setup.py` takes the first match in each list; `build-python2.sh` asserts on `ssl.OPENSSL_VERSION`
+afterwards, because picking the wrong one links cleanly and only fails at run time.
+
+Two more things worth knowing before debugging a conda build:
+
+- conda-forge's `mpicxx` hardcodes the conda compiler it was built with, so taking conda's MPI with
+  the host's compiler needs `MPICH_CXX`/`OMPI_CXX`. The bootstrap sets them, and on Linux prefers to
+  install conda compilers instead so the whole stack is one toolchain.
+- An MPI that blocks in `MPI_Finalize` compiles and links perfectly and then hangs every job
+  *after* its last print — `main.cc` calls `ORBIT_MPI_Finalize()` once `Py_Main` returns, so only a
+  script ending in `sys.exit()` escapes it. This was seen with conda-forge's mpich on `osx-arm64`
+  inside libfabric's `sockets` provider, cured by `FI_PROVIDER=tcp`, though it did not reproduce on
+  a freshly created environment. The bootstrap therefore runs a real two-rank job three times and
+  records a working `FI_PROVIDER` in `build.env` if it needs one.
+
+### Every shell
+
+`setupEnvironment.sh` derives `ORBIT_ROOT`, `ORBIT_ARCH`, the Python library and include paths,
+`PYTHONPATH`, `EXTRA_INCLUDE`, `EXTRA_LIB` and `MPI_CPP`:
 
 ```shell
 source setupEnvironment.sh
@@ -47,13 +89,19 @@ with the C++ extension modules statically linked and registered at startup. `bun
 `ImportError: No module named teapot_base`. Only the pure-Python layer under `py/orbit` can be imported by
 plain python2, and only when nothing in the import chain reaches a compiled module.
 
-Docker is the recommended route on macOS/ARM, where a native build is untested:
+A native macOS/ARM build works through `conda/bootstrap.sh`; the two CPython 2.7.18 patches it
+needs are in `conda/patches/`. Docker is still the simplest route on a laptop:
 
 ```shell
 docker build -t pyorbit .
 docker run --mount type=bind,source=/path/to/runs,target=/runs -it pyorbit /bin/bash
 pyorbit script.py 2      # inside the container: sources the environment and calls mpirun
 ```
+
+The launcher script is `bin/pyorbit.sh`, not `bin/pyorbit`: macOS filesystems are case insensitive,
+so a `bin/pyorbit` would be the same file as the `bin/pyORBIT` the build writes, and every build
+would overwrite it (and every `make clean` delete it). The Docker image symlinks it to
+`/usr/local/bin/pyorbit`; `conda/bootstrap.sh` writes an equivalent into the environment's `bin`.
 
 ### Testing
 

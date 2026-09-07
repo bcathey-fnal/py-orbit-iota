@@ -1,0 +1,30 @@
+Do not build the bundled ctypes closure allocator on arm64 macOS.
+
+Modules/_ctypes/malloc_closure.c overrides libffi's ffi_closure_alloc with a
+private mmap(PROT_READ|PROT_WRITE|PROT_EXEC) pool.  arm64 macOS refuses a
+mapping that is both writable and executable, so more_core() gets MAP_FAILED,
+every closure allocation returns NULL, and "import ctypes" dies inside
+_reset_cache with a MemoryError.  libffi has allocated closures correctly
+since 3.0.5, and every other platform already relies on it, so drop the module
+from the sources there and let -lffi supply ffi_closure_alloc/_free.
+
+-nilanjan@fnal.gov 09/07/2026
+
+--- a/setup.py
++++ b/setup.py
+@@ -2128,7 +2128,14 @@
+         depends = ['_ctypes/ctypes.h']
+ 
+         if host_platform == 'darwin':
+-            sources.append('_ctypes/malloc_closure.c')
++            # The bundled malloc_closure.c overrides libffi's own closure
++            # allocator with an mmap(PROT_WRITE|PROT_EXEC) pool.  arm64 macOS
++            # refuses that mapping, so every callback allocation returns NULL
++            # and "import ctypes" dies in _reset_cache with a MemoryError.
++            # libffi >= 3.0.5 allocates closures correctly on this platform,
++            # so leave the module out and let -lffi provide them.
++            if os.uname()[4] != 'arm64':
++                sources.append('_ctypes/malloc_closure.c')
+             sources.append('_ctypes/darwin/dlfcn_simple.c')
+             extra_compile_args.append('-DMACOSX')
+             include_dirs.append('_ctypes/darwin')

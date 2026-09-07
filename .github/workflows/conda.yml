@@ -1,0 +1,39 @@
+name: conda-build
+
+# Exercises conda/bootstrap.sh on both architectures.  Neither runner has an
+# MPI or an FFTW of its own, so this covers the "conda supplies it" paths;
+# the host-MPI path is what a cluster hits and is not reachable here.
+on: push
+
+jobs:
+  bootstrap:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    name: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Miniforge
+        run: |
+          curl -fsSL -o /tmp/miniforge.sh \
+            "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-$(uname -m).sh"
+          bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
+          echo "$HOME/miniforge3/bin" >> "$GITHUB_PATH"
+
+      - name: Bootstrap
+        run: ./conda/bootstrap.sh
+
+      - name: Test
+        run: |
+          source "$HOME/miniforge3/etc/profile.d/conda.sh"
+          conda activate pyorbit2
+          source setupEnvironment.sh
+          cd examples/AccLattice_Tests
+          ./START.sh lattice_test.py 2

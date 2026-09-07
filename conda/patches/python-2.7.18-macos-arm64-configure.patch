@@ -1,0 +1,53 @@
+Teach configure about arm64 macOS.
+
+Python 2.7.18 predates Apple Silicon: the darwin branch of configure maps the
+output of /usr/bin/arch onto MACOSX_DEFAULT_ARCH and treats anything that is
+not i386 or ppc as a fatal error, so configure stops with "Unexpected output
+of 'arch' on OSX" before it compiles a line.  Add the missing case arm.
+
+-nilanjan@fnal.gov 09/07/2026
+
+--- a/configure
++++ b/configure
+@@ -8456,6 +8456,9 @@
+ 
+     if test "${ac_osx_32bit}" = "yes"; then
+     	case `/usr/bin/arch` in
++    	arm64)
++    		MACOSX_DEFAULT_ARCH="arm64"
++    		;;
+     	i386)
+     		MACOSX_DEFAULT_ARCH="i386"
+     		;;
+@@ -8468,6 +8471,9 @@
+     	esac
+     else
+     	case `/usr/bin/arch` in
++    	arm64)
++    		MACOSX_DEFAULT_ARCH="arm64"
++    		;;
+     	i386)
+     		MACOSX_DEFAULT_ARCH="x86_64"
+     		;;
+--- a/configure.ac
++++ b/configure.ac
+@@ -2048,6 +2048,9 @@
+     
+     if test "${ac_osx_32bit}" = "yes"; then
+     	case `/usr/bin/arch` in
++    	arm64)
++    		MACOSX_DEFAULT_ARCH="arm64"
++    		;;
+     	i386) 
+     		MACOSX_DEFAULT_ARCH="i386" 
+     		;;
+@@ -2060,6 +2063,9 @@
+     	esac
+     else
+     	case `/usr/bin/arch` in
++    	arm64)
++    		MACOSX_DEFAULT_ARCH="arm64"
++    		;;
+     	i386) 
+     		MACOSX_DEFAULT_ARCH="x86_64" 
+     		;;

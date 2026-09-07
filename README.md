@@ -12,8 +12,47 @@ These features have been very useful in simulating the [Integrable Optics Test A
 
 # Installation
 
+There are two supported routes. Use conda/mamba if you are installing on a cluster, if you need to
+build against an MPI that is already there, or if you are on an ARM64 machine. Use Docker if you want
+a container and do not care which MPI you get.
+
+## With conda/mamba
+
+```shell
+git clone https://github.com/bcathey-fnal/py-orbit-iota.git
+cd py-orbit-iota
+./conda/bootstrap.sh
+```
+
+That probes the machine, installs only what is missing, compiles CPython 2.7.18 (and FFTW, if the
+host has none) from source into the environment, and builds pyORBIT. It uses the host's compilers
+and the host's MPI whenever they are there, which is what makes it work on a cluster with an
+existing MPI installation:
+
+```shell
+module load openmpi          # or whatever the site calls it
+./conda/bootstrap.sh
+```
+
+Then, once per shell:
+
+```shell
+conda activate pyorbit2
+source setupEnvironment.sh
+mpirun -np 2 ${ORBIT_ROOT}/bin/pyORBIT script.py
+```
+
+The environment holds both interpreters: `python2.7` is the one pyORBIT is built against, and
+`python`/`python3` is the latest CPython 3, for plotting and analysis. They need different OpenSSL
+major versions, so python 2.7 is linked against a private static OpenSSL 1.1.1 and conda carries
+OpenSSL 3 for python 3.
+
+Works on x86_64 and ARM64, on Linux and macOS. See [conda/README.md](conda/README.md) for the
+options, for what is taken from the host, and for troubleshooting.
+
 ## On Docker
-The recommended method of installing this code on a personal laptop or workstation is through a [Docker](https://www.docker.com) container. Once Docker is installed on the machine, build the image.
+Installing through a [Docker](https://www.docker.com) container is the simplest route on a personal
+laptop or workstation. Once Docker is installed on the machine, build the image.
 ```shell
 git clone https://github.com/bcathey-fnal/py-orbit-iota.git
 cd py-orbit-iota
@@ -26,7 +65,8 @@ docker run --mount type=bind,source="/path/to/run/directoy",target=/runs -it pyo
 Replace `/path/to/run/directory` with the path in which the run scripts are located. This directory can be accessed in `/runs` from inside the container. The above command will start a shell which can be used to run pyORBIT.
 
 ## Directly on host
-Installation procedure requires building from source.
+Building entirely from system packages, with no conda environment and no container.
+`setupEnvironment.sh` works the same way in all three cases.
 
 ### 1. Installing required libraries
 #### Ubuntu (and other distributions using apt: Debian, Mint etc)
@@ -65,8 +105,9 @@ exit
 #### Other Linux distributions, including Windows Subsystem for Linux (WSL)
 Adapt the above steps for other linux distributions. Change the package manager and package names as appropriate.
 
-#### Mac 
-Not tested natively on ARM64 Macs. Use the Docker container.
+#### Mac
+A native build on an ARM64 Mac works through `./conda/bootstrap.sh`, which carries the two patches
+CPython 2.7.18 needs on Apple Silicon. Building by hand as described here is not supported there.
 
 ### 2. Clone the source code
 ```shell
@@ -102,6 +143,10 @@ This will launch `lattice_test` example on two MPI nodes. Other examples are ava
 cd /py-orbit-iota/examples/AccLattice_Tests
 pyorbit lattice_test.py 2
 ```
+The same wrapper is `bin/pyorbit.sh` in the source tree, and `./conda/bootstrap.sh` installs an
+equivalent `pyorbit` into the environment. It is spelt with the `.sh` because macOS filesystems are
+case insensitive, where a plain `bin/pyorbit` and the `bin/pyORBIT` the build produces would be the
+same file.
 
 
 # Directory Structure
@@ -121,3 +166,6 @@ pyorbit lattice_test.py 2
 **./conf**		- configuration information.
 
 **./bin**		-  pyORBIT executables.
+
+**./conda**		- conda/mamba build system: bootstrap script, environment file and
+		  the CPython patches needed on ARM64 macOS.

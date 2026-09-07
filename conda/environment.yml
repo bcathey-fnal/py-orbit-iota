@@ -1,0 +1,45 @@
+# Base conda environment for py-orbit-iota.
+#
+# This is the set of packages that always comes from conda, whatever the host
+# already has: the libraries CPython 2.7.18 is compiled against, plus a modern
+# python 3 to work with.  They are what the interpreter -- and through it every
+# extension module -- ends up linked to, so pinning them in one file is what
+# makes a build reproducible across the nodes of a cluster.
+#
+# conda/bootstrap.sh reads the lists below and adds whatever else the host turns
+# out to be missing: compilers, an MPI, GSL, a BLAS for numpy.  Edit versions
+# here rather than in the script.
+#
+# It is also a valid environment file on its own:
+#
+#     mamba env create -f conda/environment.yml
+#     ./conda/bootstrap.sh -n pyorbit2
+#
+# -nilanjan@fnal.gov 09/07/2026
+
+name: pyorbit2
+
+channels:
+  - conda-forge
+
+dependencies:
+  # The latest python 3, for everything that is not pyORBIT itself: plotting,
+  # analysis, tooling.  It brings OpenSSL 3 with it, which is why python 2.7
+  # gets its own static OpenSSL 1.1.1 (conda/build-openssl.sh) instead of the
+  # conda openssl package -- 2.7's _ssl.c does not compile against OpenSSL 3,
+  # and an environment can only hold one version of a package.
+  - python
+  - pip
+  # The interpreter's optional-module dependencies.  A missing one
+  # is not a build failure, just a standard library module that silently is not
+  # there, which is why they are all listed rather than left to the host.
+  - zlib
+  - bzip2
+  - xz
+  - readline
+  - ncurses
+  - sqlite
+  - gdbm
+  - libffi
+  # Used by the FFTW and CPython configure scripts to find the above.
+  - pkg-config
