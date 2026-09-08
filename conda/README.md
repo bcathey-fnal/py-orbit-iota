@@ -23,8 +23,9 @@ or, with the environment active, from anywhere:
 pyorbit script.py 2
 ```
 
-Tested on `osx-arm64`; the same paths are exercised on `linux-64`,
-`linux-aarch64` and `osx-64`.  Miniforge is the recommended conda
+Tested on `osx-arm64`, end to end from an empty environment.  `linux-64`,
+`linux-aarch64` and `osx-64` go through the same script but have not been run:
+there is no CI at the moment.  Miniforge is the recommended conda
 installation — it defaults to conda-forge and ships `mamba`, which the
 bootstrap uses when it is there.
 

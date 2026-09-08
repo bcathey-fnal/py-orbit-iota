@@ -117,9 +117,10 @@ bash reports the path as invoked and does **not** resolve symlinks, so in the co
 
 ### Testing
 
-There is no unit test suite. CI (`.github/workflows/compilation.yml`) builds on CentOS Stream and Ubuntu
-20.04, and its entire test step is `.github/workflows/run-tests.sh`, which runs
-`examples/AccLattice_Tests/START.sh lattice_test.py 2`. That example is the de facto regression test.
+There is no unit test suite, and no CI: the GitHub workflows were removed after both of them failed.
+`.github/workflows/build.sh` and `run-tests.sh` are what they called and still work by hand from the
+repository root; the latter runs `examples/AccLattice_Tests/START.sh lattice_test.py 2`, which is the
+de facto regression test.
 `src/tests/bunch_test/` is a standalone C++ program with its own Makefile, not wired into the top-level
 build. Verify changes by running an example or a purpose-built script under `bin/pyORBIT`.
 
