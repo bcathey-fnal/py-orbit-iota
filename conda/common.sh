@@ -131,12 +131,21 @@ run_with_timeout() {
     local secs=$1; shift
     local pid killer rc=0
     "$@" & pid=$!
-    ( sleep "$secs"; kill -9 "$pid" ) >/dev/null 2>&1 & killer=$!
+    # The watchdog runs sleep with exec, so that killing it below kills the
+    # sleep itself: a plain `( sleep N; kill ... )` leaves the sleep orphaned
+    # and running for the full timeout after the command has finished.
+    ( exec_sleep_then_kill "$secs" "$pid" ) >/dev/null 2>&1 & killer=$!
     wait "$pid" 2>/dev/null || rc=$?
     kill "$killer" >/dev/null 2>&1 || true
+    pkill -P "$killer" >/dev/null 2>&1 || true
     wait "$killer" 2>/dev/null || true
     [ "$rc" = 137 ] && rc=124
     return $rc
+}
+
+exec_sleep_then_kill() {
+    sleep "$1"
+    kill -9 "$2" >/dev/null 2>&1
 }
 
 _mpi_probe_source() {
@@ -272,4 +281,32 @@ yaml_list() {
             if (length($0)) print
         }
     ' "$file"
+}
+
+# prefer_gcc_name <compiler-path>
+#
+# distutils works out how to spell a runtime library path from the *basename*
+# of CC: "gcc"/"g++" get -Wl,-R, darwin gets -L, and everything else gets
+# Solaris' bare -R, which gcc rejects with "unrecognized command-line option
+# '-R'".  Reaching gcc through the generic `cc` symlink -- which is what both
+# /usr/bin/cc and conda's compiler packages give you -- therefore breaks any
+# extension built with runtime_library_dirs, numpy against openblas among them.
+#
+# Hand back the gcc-named sibling when it is demonstrably the same compiler.
+# Linux only: on darwin the basename is never consulted.
+prefer_gcc_name() {
+    local comp="$1" dir base alt
+    if [ "$(uname -s)" != Linux ]; then echo "$comp"; return; fi
+    dir=$(dirname "$comp"); base=$(basename "$comp")
+    case "$base" in
+        cc)  alt="$dir/gcc" ;;
+        c++) alt="$dir/g++" ;;
+        *)   echo "$comp"; return ;;
+    esac
+    if [ -x "$alt" ] &&
+       [ "$("$comp" --version 2>/dev/null | head -1)" = "$("$alt" --version 2>/dev/null | head -1)" ]; then
+        echo "$alt"
+    else
+        echo "$comp"
+    fi
 }

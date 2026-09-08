@@ -23,10 +23,11 @@ or, with the environment active, from anywhere:
 pyorbit script.py 2
 ```
 
-Tested on `osx-arm64`, end to end from an empty environment.  `linux-64`,
-`linux-aarch64` and `osx-64` go through the same script but have not been run:
-there is no CI at the moment.  Miniforge is the recommended conda
-installation — it defaults to conda-forge and ships `mamba`, which the
+Tested end to end from an empty environment on `osx-arm64` (natively) and on
+`linux-aarch64` (in a container), in both cases through to the regression
+example running on two ranks.  `linux-64` and `osx-64` go through the same
+script but have not been run; there is no CI at the moment.  Miniforge is the
+recommended conda installation — it defaults to conda-forge and ships `mamba`, which the
 bootstrap uses when it is there.
 
 

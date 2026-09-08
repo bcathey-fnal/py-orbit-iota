@@ -77,10 +77,33 @@ fi
 # errors.  -std=gnu17 plus these demotions are what the project Dockerfile
 # uses; they are needed verbatim on clang >= 15 and gcc >= 14.
 
-relax="-Wno-error=implicit-function-declaration -Wno-error=implicit-int"
-relax="$relax -Wno-error=incompatible-pointer-types -Wno-error=int-conversion"
-relax="$relax -Wno-error=implicit-int-conversion -Wno-error=deprecated-non-prototype"
-relax="$relax -Wno-error=strict-prototypes -Wno-unknown-warning-option"
+# Do not assume the compiler understands any particular one of these. clang
+# and gcc spell these warnings differently -- gcc has no -Wimplicit-int-conversion
+# and rejects a -Wno-error= naming an option it does not have as a hard error,
+# which -Wno-unknown-warning-option does not suppress because that is itself a
+# clang flag. Passing the clang set to gcc fails the very first configure test
+# with "C compiler cannot create executables". So offer each one to the compiler
+# in use and keep what it accepts.
+relax_candidates="-std=gnu17
+    -Wno-error=implicit-function-declaration
+    -Wno-error=implicit-int
+    -Wno-error=incompatible-pointer-types
+    -Wno-error=int-conversion
+    -Wno-error=implicit-int-conversion
+    -Wno-error=deprecated-non-prototype
+    -Wno-error=strict-prototypes
+    -Wno-unknown-warning-option"
+
+relax=""
+relax_probe=$(mktemp -d)
+printf 'int main(void){return 0;}\n' > "$relax_probe/t.c"
+for candidate in $relax_candidates; do
+    if "${CC:-cc}" $candidate "$relax_probe/t.c" -o "$relax_probe/t" >/dev/null 2>&1; then
+        relax="$relax $candidate"
+    fi
+done
+rm -rf "$relax_probe"
+info "compiler flags accepted by ${CC:-cc}:$relax"
 
 # _ssl and _hashlib must find the private OpenSSL 1.1.1 (see build-openssl.sh)
 # and not the OpenSSL 3 that conda's python 3 brings into the prefix: 2.7's
@@ -100,7 +123,7 @@ else
     conda/build-openssl.sh first."
 fi
 
-export CFLAGS="-std=gnu17 -O2 -fPIC $relax ${CFLAGS:-}"
+export CFLAGS="-O2 -fPIC$relax ${CFLAGS:-}"
 export CPPFLAGS="${ssl_inc}-I$PREFIX/include ${CPPFLAGS:-}"
 export LDFLAGS="${ssl_lib}-L$PREFIX/lib -Wl,-rpath,$PREFIX/lib ${LDFLAGS:-}"
 # The interpreter must find its own libpython at run time without anyone
@@ -215,12 +238,31 @@ done
 # in C, but -Wno-unknown-warning-option is already in the set and gcc ignores
 # unrecognised -Wno- options, so C builds are unaffected.
 log "correcting the recorded build flags for C++ extensions"
-for f in "$PREFIX/lib/python2.7/config/Makefile" "$PREFIX/lib/python2.7/_sysconfigdata.py"; do
-    if [ -f "$f" ]; then
-        sed -i.orig 's/-std=gnu17/-Wno-register -Wno-deprecated-register/g' "$f"
-        rm -f "$f.orig"
+cxx_relax=""
+relax_probe=$(mktemp -d)
+printf 'int main(void){return 0;}\n' > "$relax_probe/t.c"
+for candidate in -Wno-register -Wno-deprecated-register; do
+    if "${CC:-cc}" $candidate "$relax_probe/t.c" -o "$relax_probe/t" >/dev/null 2>&1; then
+        cxx_relax="$cxx_relax $candidate"
     fi
 done
+rm -rf "$relax_probe"
+
+py_makefile="$PREFIX/lib/python2.7/config/Makefile"
+py_sysconfig="$PREFIX/lib/python2.7/_sysconfigdata.py"
+# Strip whatever C standard was selected, whether or not it was -std=gnu17,
+# then append the C++ relaxations in each file's own format: the Makefile holds
+# `CFLAGS=  ...`, _sysconfigdata.py holds `'CFLAGS': '...'`.
+for f in "$py_makefile" "$py_sysconfig"; do
+    [ -f "$f" ] || continue
+    sed -i.orig 's/ -std=gnu[0-9a-z]*//g' "$f"
+    rm -f "$f.orig"
+done
+if [ -n "$cxx_relax" ]; then
+    [ -f "$py_makefile" ] && sed -i.orig "s|^CFLAGS=\(.*\)$|CFLAGS=\1$cxx_relax|" "$py_makefile"
+    [ -f "$py_sysconfig" ] && sed -i.orig "s|\('CFLAGS': '[^']*\)'|\1$cxx_relax'|" "$py_sysconfig"
+    rm -f "$py_makefile.orig" "$py_sysconfig.orig"
+fi
 rm -f "$PREFIX/lib/python2.7/_sysconfigdata.pyc"
 
 ln -sf python2.7 "$PREFIX/bin/python2"

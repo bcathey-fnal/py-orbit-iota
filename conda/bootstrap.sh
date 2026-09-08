@@ -399,10 +399,23 @@ PREFIX=${CONDA_PREFIX:-$ENV_PREFIX}
 # fails on a missing <endian.h> when the C++ half compiles. scipy is exactly
 # such a package.
 if [ "$USE_CONDA_COMPILERS" = 0 ]; then
-    export CC="$HOST_CC"
-    export CXX="$HOST_CXX"
-    info "pinned CC=$CC CXX=$CXX"
+    export CC="$(prefer_gcc_name "$HOST_CC")"
+    export CXX="$(prefer_gcc_name "$HOST_CXX")"
+else
+    # conda-forge's compiler packages no longer ship activate.d hooks, so
+    # nothing sets CC for us; they only drop cc/gcc/c++/g++ into the prefix.
+    for candidate in "$PREFIX/bin/gcc" "$PREFIX/bin/clang" "$PREFIX/bin/cc"; do
+        [ -x "$candidate" ] && { export CC="$candidate"; break; }
+    done
+    for candidate in "$PREFIX/bin/g++" "$PREFIX/bin/clang++" "$PREFIX/bin/c++"; do
+        [ -x "$candidate" ] && { export CXX="$candidate"; break; }
+    done
+    [ -n "${CC:-}" ] && [ -n "${CXX:-}" ] || die "conda compilers were requested but
+    the prefix has no usable C/C++ compiler in $PREFIX/bin."
 fi
+info "pinned CC=$CC CXX=$CXX"
+probe_cc_works "$CC" || die "the pinned C compiler $CC cannot build a program"
+probe_cxx_works "$CXX" || die "the pinned C++ compiler $CXX cannot build a program"
 
 # On Linux a conda toolchain ships its own libstdc++.  Mixing that with a host
 # compiler newer than it produces link errors about missing GLIBCXX symbols,
@@ -471,9 +484,19 @@ else
             break
         fi
     done
-    [ -n "$MPI_RUNTIME_ENV" ] || die "no working configuration found for $MPI_CPP_RESOLVED.
-    A two-rank MPI job neither completes by default nor with FI_PROVIDER=tcp or
-    FI_PROVIDER=udp. Try --mpi openmpi, or point the build at a host MPI."
+    if [ -z "$MPI_RUNTIME_ENV" ]; then
+        # Advisory, not fatal. Plenty of places refuse to launch an MPI job
+        # without saying anything about whether the toolchain is sound: CI
+        # sandboxes, login nodes under a batch policy, containers without a
+        # usable network namespace. The compile probe above is the one that
+        # decides whether pyORBIT can be built at all; this one only decides
+        # whether a provider needs recording, so carry on without one.
+        warn "could not run a two-rank MPI job with $MPI_CPP_RESOLVED, by
+    default or with FI_PROVIDER=tcp or FI_PROVIDER=udp. Continuing: this often
+    just means the environment does not allow launching one. If jobs later hang
+    after their last line of output, set FI_PROVIDER=tcp, or rebuild against a
+    host MPI or --mpi openmpi."
+    fi
 fi
 
 # ---------------------------------------------------- record the settings ---
