@@ -43,23 +43,46 @@ and library directories must precede the prefix' own in `CPPFLAGS`/`LDFLAGS`, si
 afterwards, because picking the wrong one links cleanly and only fails at run time.
 
 CPython records the CFLAGS it was built with and distutils reuses them for every later extension
-build, C++ included, so `build-python2.sh` substitutes `-Wno-register` for the `-std=gnu17` it needs
-to compile 2.7 itself: clang rejects a C standard selector for C++ outright, and without one it
-falls back to C++17, which removed the `register` that python 2.7's headers still use. Either
-failure only appears when something downstream is installed — scipy has a single `.cpp` file and
-that is enough — so the build compiles and imports a real C++ extension before declaring success.
+build, C++ included, which makes two of them wrong to keep. `-std=gnu17`, needed to compile 2.7
+itself on current compilers, is a C standard selector that clang refuses for a C++ source; remove it
+and clang falls back to its default of C++17, which deleted the `register` that 2.7's own headers
+still use. `build-python2.sh` therefore strips any `-std=` from the recorded flags and appends
+`-Wno-register`. Neither failure appears until something downstream is installed — scipy has a
+single `.cpp` file and that is enough — so the build compiles and imports a real C++ extension
+before declaring success.
 
-Two more things worth knowing before debugging a conda build:
+None of those flags is assumed to be understood. clang and gcc spell these warnings differently, and
+gcc rejects a `-Wno-error=` naming an option it does not have as a *hard error* that
+`-Wno-unknown-warning-option` cannot suppress, that being a clang flag itself. Handing the clang set
+to gcc fails the very first configure test with "C compiler cannot create executables". Each flag is
+offered to the compiler in use and only the accepted ones are kept.
+
+The python 2.7 ceilings are numpy 1.16.6 and scipy 1.2.3. `--with-scipy` installs the latter, from a
+wheel on `linux-64` and from source — needing a Fortran compiler — everywhere else.
+`py/orbit/matching` additionally imports matplotlib, which is not installed; the last python 2
+release is 2.2.5.
+
+Three more things worth knowing before debugging a conda build:
 
 - conda-forge's `mpicxx` hardcodes the conda compiler it was built with, so taking conda's MPI with
   the host's compiler needs `MPICH_CXX`/`OMPI_CXX`. The bootstrap sets them, and on Linux prefers to
-  install conda compilers instead so the whole stack is one toolchain.
+  install conda compilers instead so the whole stack is one toolchain. Those packages no longer ship
+  `activate.d` hooks and so export no `CC` at all, which is why `CC` and `CXX` are pinned by absolute
+  path in both branches rather than left to `PATH` or to activation. conda's compiler packages also
+  drop a `cc` into the prefix without a matching `c++`, so an unpinned build picks up conda's C
+  compiler and the host's C++ one.
+- distutils works out how to spell a runtime library path from the *basename* of `CC`: anything not
+  called `gcc` or `g++` gets Solaris' `-R`, which gcc rejects outright, and numpy then fails to link
+  against openblas. Reaching gcc through the generic `cc` symlink is the normal case on Linux, so
+  `prefer_gcc_name()` in `conda/common.sh` substitutes the `gcc`-named sibling when it is
+  demonstrably the same compiler.
 - An MPI that blocks in `MPI_Finalize` compiles and links perfectly and then hangs every job
   *after* its last print — `main.cc` calls `ORBIT_MPI_Finalize()` once `Py_Main` returns, so only a
   script ending in `sys.exit()` escapes it. This was seen with conda-forge's mpich on `osx-arm64`
   inside libfabric's `sockets` provider, cured by `FI_PROVIDER=tcp`, though it did not reproduce on
-  a freshly created environment. The bootstrap therefore runs a real two-rank job three times and
-  records a working `FI_PROVIDER` in `build.env` if it needs one.
+  a freshly created environment. The bootstrap runs a real two-rank job three times and records a
+  working `FI_PROVIDER` in `build.env` if it needs one. It only *warns* when nothing works: a
+  sandbox that refuses to launch MPI says nothing about whether the build is sound.
 
 ### Every shell
 
@@ -81,6 +104,17 @@ make
 The first `make` fails to link `bin/pyORBIT` but succeeds at everything else — the executable needs every
 extension object file to exist first, so the second `make` is what produces it. This is expected on a clean
 tree, not a broken checkout. The Makefiles glob for `*.cc`, so adding a source file needs no build-file edit.
+
+Two traps in `conf/make_common_config`, which assembles the `LIBS` line for both the executable and
+the `ext/` shared libraries:
+
+- `LIBS` ends a line with a bare `-Xlinker`, which takes the **next token** as its argument. The
+  commented-out line above it shows where `-export-dynamic` used to be. It currently eats the first
+  token of `EXTRA_LIB`, or `-lfftw3` when `EXTRA_LIB` is empty; both happen to be things `ld`
+  accepts, so it works by luck. Anything added or removed around it changes which token vanishes.
+- `-lgsl -lgslcblas` are linked into everything even though only `ext/scattering` uses GSL, so GSL
+  is a hard build dependency of `bin/pyORBIT`. A machine without it gets `cannot find -lgsl` at the
+  final link, which is how the old CI failed.
 
 Run a script:
 
@@ -123,6 +157,25 @@ repository root; the latter runs `examples/AccLattice_Tests/START.sh lattice_tes
 de facto regression test.
 `src/tests/bunch_test/` is a standalone C++ program with its own Makefile, not wired into the top-level
 build. Verify changes by running an example or a purpose-built script under `bin/pyORBIT`.
+
+With no CI, a build-system change is checked on Linux from a macOS machine with a container. This is
+the recipe the conda work was verified with; it builds everything and ends with the regression test
+on two ranks, and takes roughly fifteen minutes:
+
+```shell
+docker run --rm -v "$PWD":/src:ro ubuntu bash -c '
+  apt-get update -qq && apt-get install -y -qq build-essential curl bzip2 ca-certificates
+  curl -fsSL -o /tmp/mf.sh \
+    "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-$(uname -m).sh"
+  bash /tmp/mf.sh -b -p /opt/mf && export PATH=/opt/mf/bin:$PATH
+  mkdir /work && tar -C /src --exclude=.git -cf - . | tar -C /work -xf - && cd /work
+  ./conda/bootstrap.sh -j4
+  . /opt/mf/etc/profile.d/conda.sh && conda activate pyorbit2 && . ./setupEnvironment.sh
+  cd examples/AccLattice_Tests && ./START.sh lattice_test.py 2'
+```
+
+The tree is copied out of the read-only mount rather than built in place, so the container cannot
+write to the working tree and its Linux object files cannot collide with the host's.
 
 ## Architecture
 
@@ -172,6 +225,10 @@ Behaviours that are easy to get wrong:
 - A newly added attribute is **zero for every particle**. Values must be filled in explicitly.
 - `partAttrValue` aborts the process through `ORBIT_MPI_Finalize` when `part_index >= bunch.getSize()`. An
   index list cached from before a particle loss is fatal, not a silent error.
+- `getSizeGlobal()` is an `MPI_Allreduce` behind an accessor-shaped name, as are the other `*Global`
+  calls. Calling one inside `if rank == 0:` leaves the other ranks out of the collective and the job
+  dies with a message truncation error raised deep inside MPI, nowhere near the call. Compute on
+  every rank, print on one.
 - `Bunch::compress()` is an order-preserving forward compaction: survivors keep their relative order and
   their attributes travel with them, so particles appended last stay last. Deletion is lazy —
   `deleteParticleFast` only flags, and `compress()` is called from the binning and analysis routines.
