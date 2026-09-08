@@ -116,6 +116,27 @@ the bare `python` and `pip` names.  Its four unversioned helper scripts are
 renamed out of the way (`pydoc2.7`, `idle2.7`, `2to3-2.7`, `smtpd2.7.py`)
 because conda's python 3 owns `bin/pydoc`.
 
+### Building C++ extensions for python 2.7
+
+CPython records the `CFLAGS` it was compiled with and distutils hands them
+straight back to every later extension build, C++ included.  Two of them have
+to be corrected after the install, which `build-python2.sh` does:
+
+* `-std=gnu17` is needed to compile 2.7 itself on current compilers, but clang
+  refuses it for a C++ source outright — `invalid argument '-std=gnu17' not
+  allowed with 'C++'`.  That alone stops scipy, which has one `.cpp` file.
+* Removing it leaves clang on its default, now C++17, which deleted the
+  `register` storage class that python 2.7's own headers still use, so every
+  `#include <Python.h>` from C++ becomes eight errors.
+
+Substituting `-Wno-register` for the standard selector settles both.  The build
+then compiles and imports a real C++ extension module before declaring success,
+because neither failure shows up until something downstream is installed.
+
+Note that `$CFLAGS` from your environment is *appended* to the recorded flags
+rather than replacing them, so exporting a `-std=` of your own reintroduces the
+first problem.
+
 They need different OpenSSL major versions and a conda environment can hold
 only one `openssl` package, so python 2.7 gets its own, built statically into
 `$CONDA_PREFIX/opt/openssl-1.1.1` and linked directly into `_ssl` and
@@ -168,12 +189,34 @@ an installation you will keep.
 
 ### `--with-scipy`
 
-Off by default.  pyORBIT does not need scipy; `py/orbit/bumps`,
-`py/orbit/matching` and `py/orbit/orbit_correction` do.  The last release that
-supports python 2.7 is scipy 1.2.x, which has no wheels for aarch64 or Apple
-Silicon and so has to be compiled with a Fortran compiler — on macOS that
-means pulling in the whole conda toolchain.  numpy, which more of `py/orbit`
-uses, is installed by default and needs no Fortran.
+Off by default, and only because of what it costs, not because it is fragile:
+it is tested, and scipy works under `bin/pyORBIT`.
+
+pyORBIT itself does not need scipy. `py/orbit/matching`,
+`py/orbit/orbit_correction` and `py/orbit/bumps` do, between them using
+`scipy.optimize` (`fsolve`, `root`, `minimize`, `leastsq`),
+`scipy.integrate.odeint` and `scipy.constants`. Those sit on MINPACK and
+ODEPACK, which are Fortran, so there is no numpy-only substitute.
+
+scipy 1.2.x is the last series supporting python 2.7, and it ships `cp27`
+wheels only for manylinux1 and Windows:
+
+| | how scipy arrives | needs a Fortran compiler |
+|---|---|---|
+| linux-64 | manylinux1 `cp27mu` wheel | no |
+| linux-aarch64, osx-arm64 | source build | yes |
+| osx-64 | source build — the wheel is `cp27m`, this interpreter is `cp27mu` | yes |
+
+So on a typical x86_64 cluster `--with-scipy` costs a download. Everywhere else
+it adds a conda Fortran toolchain (~150 MB) and a few minutes of compiling; the
+bootstrap only installs that toolchain where a source build is actually needed.
+
+`py/orbit/matching` additionally does `from matplotlib.pyplot import *`, which
+is not installed. The last python 2.7 matplotlib is 2.2.5, if you want it:
+
+```shell
+pip2 install 'matplotlib<3'
+```
 
 
 ## Sources compiled from source

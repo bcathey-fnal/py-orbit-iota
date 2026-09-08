@@ -191,6 +191,38 @@ done
 
 # ------------------------------------------------------------- convenience --
 
+# CPython records the CFLAGS it was compiled with, and distutils hands them
+# straight back to every later extension build -- including C++ sources, where
+# clang rejects the standard selector outright:
+#
+#   error: invalid argument '-std=gnu17' not allowed with 'C++'
+#
+# which is enough to stop scipy (one .cpp file in scipy/interpolate) and any
+# other python 2 package carrying C++.  The flag is needed to compile 2.7
+# itself on current compilers but must not be passed on.  Two files record it:
+# config/Makefile, which distutils.sysconfig parses, and _sysconfigdata.py,
+# which the sysconfig module reads; both have to be edited.
+# Two of them break C++, and 2.7's headers are full of C++:
+#
+#   -std=gnu17 is a C standard selector, and clang refuses it outright for a
+#   C++ source ("invalid argument '-std=gnu17' not allowed with 'C++'").
+#
+#   Without it clang falls back to its default, now C++17, which removed the
+#   `register` storage class that Python 2.7's own headers still use, so every
+#   #include <Python.h> from C++ becomes eight errors.
+#
+# Swapping one for -Wno-register fixes both at once. The flags are meaningless
+# in C, but -Wno-unknown-warning-option is already in the set and gcc ignores
+# unrecognised -Wno- options, so C builds are unaffected.
+log "correcting the recorded build flags for C++ extensions"
+for f in "$PREFIX/lib/python2.7/config/Makefile" "$PREFIX/lib/python2.7/_sysconfigdata.py"; do
+    if [ -f "$f" ]; then
+        sed -i.orig 's/-std=gnu17/-Wno-register -Wno-deprecated-register/g' "$f"
+        rm -f "$f.orig"
+    fi
+done
+rm -f "$PREFIX/lib/python2.7/_sysconfigdata.pyc"
+
 ln -sf python2.7 "$PREFIX/bin/python2"
 ln -sf python2.7-config "$PREFIX/bin/python2-config"
 [ -e "$PREFIX/bin/pip2.7" ] && ln -sf pip2.7 "$PREFIX/bin/pip2"
@@ -218,6 +250,40 @@ fi
 # Flag ordering decides which OpenSSL _ssl picked up, and getting it wrong
 # fails at run time rather than at link time, so confirm it here.
 ssl_version=$("$PREFIX/bin/python2.7" -c 'import ssl; print(ssl.OPENSSL_VERSION)' 2>/dev/null || true)
+# Those flags only bite things built *later*, so prove the point rather than
+# trusting the edit: build a real C++ extension module the way any package
+# would, and import it.
+log "checking that a C++ extension builds for this interpreter"
+cxx_check=$(mktemp -d)
+cat > "$cxx_check/probe.cpp" <<'EOF'
+#include <Python.h>
+#include <string>
+static PyObject* probe(PyObject*, PyObject*) {
+    std::string s("ok");
+    return PyString_FromString(s.c_str());
+}
+static PyMethodDef methods[] = {{"probe", probe, METH_NOARGS, ""}, {NULL, NULL, 0, NULL}};
+PyMODINIT_FUNC initcxxprobe(void) { Py_InitModule("cxxprobe", methods); }
+EOF
+cat > "$cxx_check/setup.py" <<'EOF'
+from distutils.core import setup, Extension
+setup(name="cxxprobe", ext_modules=[Extension("cxxprobe", ["probe.cpp"])])
+EOF
+# distutils appends $CFLAGS from the environment to the recorded flags, and
+# this script still has the interpreter's own build flags exported. Drop them,
+# so what is tested is the configuration a user's shell will see.
+if ( cd "$cxx_check" \
+     && env -u CFLAGS -u CPPFLAGS -u LDFLAGS "$PREFIX/bin/python2.7" setup.py -q build_ext --inplace >/dev/null 2>&1 \
+     && env -u CFLAGS -u CPPFLAGS -u LDFLAGS "$PREFIX/bin/python2.7" -c 'import cxxprobe; assert cxxprobe.probe() == "ok"' ); then
+    info "C++ extensions build against this interpreter"
+else
+    rm -rf "$cxx_check"
+    die "a C++ extension will not build against this interpreter.
+    Nothing carrying C++ sources -- scipy among them -- can be installed.
+    Check the CFLAGS recorded in $PREFIX/lib/python2.7/config/Makefile."
+fi
+rm -rf "$cxx_check"
+
 case "$ssl_version" in
     "OpenSSL 1.1.1"*) info "ssl: $ssl_version" ;;
     "")               warn "python2.7 has no working ssl module; pip will not reach PyPI" ;;

@@ -52,10 +52,10 @@ Build options
   --no-numpy             do not install numpy
   --with-scipy           also install scipy.  Needed by py/orbit/bumps,
                          py/orbit/matching and py/orbit/orbit_correction, but
-                         not by pyORBIT itself.  The last release supporting
-                         python 2.7 is scipy 1.2.x, which has to be compiled
-                         and needs a Fortran compiler; on macOS that pulls in
-                         the whole conda toolchain.
+                         not by pyORBIT itself.  The last series supporting
+                         python 2.7 is scipy 1.2.x: a wheel on linux-64, a
+                         source build everywhere else, which pulls in a conda
+                         Fortran toolchain (~150 MB) and takes a few minutes.
   --skip-python          reuse a python2.7 already present in the prefix
   --keep-sources         keep the unpacked CPython, OpenSSL and FFTW build
                          trees.  They are around 250 MB and nothing needs them
@@ -193,8 +193,19 @@ HOST_CC=${CC:-cc}
 HOST_CXX=${CXX:-c++}
 HOST_COMPILERS_WORK=0
 if probe_cc_works "$HOST_CC" && probe_cxx_works "$HOST_CXX"; then
+    # Resolve to absolute paths now, while no environment of ours is active.
+    # Bare names are resolved through PATH at every later use, and conda's
+    # compiler packages put a `cc` in the prefix that then shadows the host's
+    # -- see the CC/CXX pinning below for why that matters.
+    HOST_CC=$(command -v "$HOST_CC")
+    HOST_CXX=$(command -v "$HOST_CXX")
+    if is_conda_path "$HOST_CC" || is_conda_path "$HOST_CXX"; then
+        warn "the C or C++ compiler found is inside a conda environment
+    ($HOST_CC, $HOST_CXX). Run 'conda deactivate' and try again if you meant
+    to build with the host's."
+    fi
     HOST_COMPILERS_WORK=1
-    info "compilers    : host, $(command -v "$HOST_CC") / $(command -v "$HOST_CXX")"
+    info "compilers    : host, $HOST_CC / $HOST_CXX"
 else
     info "compilers    : none usable on the host"
 fi
@@ -324,7 +335,11 @@ while IFS= read -r ch; do channel_args+=(-c "$ch"); done < <(yaml_list "$ENV_FIL
 # on any non-Intel Mac and the build dies on it.  openblas is a prebuilt
 # package, so this costs no compiler toolchain.
 [ "$WANT_NUMPY" = 1 ] && pkgs+=(openblas)
-if [ "$WANT_SCIPY" = 1 ] && [ -z "$HOST_FORTRAN" ]; then
+# scipy 1.2.x, the last series supporting python 2.7, ships cp27 wheels only
+# for manylinux1 and Windows.  linux-64 therefore gets a wheel and needs no
+# Fortran at all; everywhere else it is a source build of MINPACK, ODEPACK,
+# FITPACK and friends, which does.
+if [ "$WANT_SCIPY" = 1 ] && [ -z "$HOST_FORTRAN" ] && [ "$SUBDIR" != linux-64 ]; then
     pkgs+=(fortran-compiler)
 fi
 
@@ -373,6 +388,22 @@ activate_prefix "$ENV_PREFIX"
 PREFIX=${CONDA_PREFIX:-$ENV_PREFIX}
 [ "$PREFIX" = "$ENV_PREFIX" ] || die "activation landed in $PREFIX, expected $ENV_PREFIX"
 
+# Pin the compilers by absolute path for everything built from here on: the
+# interpreter, OpenSSL, FFTW, and the numpy and scipy wheels pip builds.
+#
+# This is not belt and braces.  conda's fortran-compiler -- which --with-scipy
+# pulls in -- installs a `cc` and a `gcc` into the prefix but no C++ compiler
+# at all, so with the prefix first on PATH, `cc` becomes conda's clang while
+# `c++` stays the host's. numpy is then configured against conda's clang, which
+# ships an endian.h of its own, and any package with both C and C++ sources
+# fails on a missing <endian.h> when the C++ half compiles. scipy is exactly
+# such a package.
+if [ "$USE_CONDA_COMPILERS" = 0 ]; then
+    export CC="$HOST_CC"
+    export CXX="$HOST_CXX"
+    info "pinned CC=$CC CXX=$CXX"
+fi
+
 # On Linux a conda toolchain ships its own libstdc++.  Mixing that with a host
 # compiler newer than it produces link errors about missing GLIBCXX symbols,
 # and the failure surfaces far from its cause.
@@ -391,6 +422,8 @@ if [ "$USE_CONDA_MPI" = 1 ]; then
     if [ "$USE_CONDA_COMPILERS" = 0 ]; then
         # Point the wrapper at the host compiler; the one baked into it does
         # not exist unless the conda toolchain is installed too.
+        # $HOST_CC/$HOST_CXX are absolute, so the wrapper does not depend on
+        # what PATH resolves them to later.
         case "$MPI_FLAVOUR" in
             mpich)   MPI_WRAPPER_ENV="MPICH_CC=$HOST_CC MPICH_CXX=$HOST_CXX" ;;
             openmpi) MPI_WRAPPER_ENV="OMPI_CC=$HOST_CC OMPI_CXX=$HOST_CXX" ;;
@@ -519,18 +552,19 @@ if [ "$WANT_NUMPY" = 1 ]; then
 fi
 
 if [ "$WANT_SCIPY" = 1 ]; then
-    # gfortran >= 10 rejects the argument-type mismatches in the bundled
-    # FORTRAN 77; scipy 1.2.x, the last release for python 2.7, predates the fix.
+    log "installing scipy"
+    # gfortran >= 10 rejects the argument-type mismatches in the legacy F77
+    # scipy 1.2.x carries; it predates the fix.  Ignored when pip finds a wheel.
     export FFLAGS="-fallow-argument-mismatch ${FFLAGS:-}"
     export FCFLAGS="-fallow-argument-mismatch ${FCFLAGS:-}"
-    "$PY" -m pip install --no-cache-dir --disable-pip-version-check \
-        'Cython==0.29.37' pkgconfig || true
     if CFLAGS="$NPY_CFLAGS ${CFLAGS:-}" "$PY" -m pip install --no-cache-dir \
             --disable-pip-version-check scipy; then
         "$PY" -c 'import scipy; print("scipy " + scipy.__version__)'
     else
-        warn "scipy did not build. pyORBIT itself does not need it, but
-    py/orbit/{bumps,matching,orbit_correction} do."
+        warn "scipy did not install. pyORBIT itself does not need it, but
+    py/orbit/{bumps,matching,orbit_correction} do. A source build needs a
+    Fortran compiler; re-run with --with-scipy on a machine that has one, or
+    install conda's fortran-compiler into the environment by hand."
     fi
 fi
 

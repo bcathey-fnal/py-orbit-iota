@@ -42,6 +42,13 @@ and library directories must precede the prefix' own in `CPPFLAGS`/`LDFLAGS`, si
 `setup.py` takes the first match in each list; `build-python2.sh` asserts on `ssl.OPENSSL_VERSION`
 afterwards, because picking the wrong one links cleanly and only fails at run time.
 
+CPython records the CFLAGS it was built with and distutils reuses them for every later extension
+build, C++ included, so `build-python2.sh` substitutes `-Wno-register` for the `-std=gnu17` it needs
+to compile 2.7 itself: clang rejects a C standard selector for C++ outright, and without one it
+falls back to C++17, which removed the `register` that python 2.7's headers still use. Either
+failure only appears when something downstream is installed — scipy has a single `.cpp` file and
+that is enough — so the build compiles and imports a real C++ extension before declaring success.
+
 Two more things worth knowing before debugging a conda build:
 
 - conda-forge's `mpicxx` hardcodes the conda compiler it was built with, so taking conda's MPI with
