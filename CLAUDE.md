@@ -110,6 +110,11 @@ so a `bin/pyorbit` would be the same file as the `bin/pyORBIT` the build writes,
 would overwrite it (and every `make clean` delete it). The Docker image symlinks it to
 `/usr/local/bin/pyorbit`; `conda/bootstrap.sh` writes an equivalent into the environment's `bin`.
 
+Because of that symlink, the launcher cannot locate the tree from `${BASH_SOURCE[0]}` directly:
+bash reports the path as invoked and does **not** resolve symlinks, so in the container it yields
+`/usr/local/bin/pyorbit` and the tree looks like `/usr/local`. It walks the link chain with
+`readlink` first. Test any change to it through the symlink, not just in the tree.
+
 ### Testing
 
 There is no unit test suite. CI (`.github/workflows/compilation.yml`) builds on CentOS Stream and Ubuntu
