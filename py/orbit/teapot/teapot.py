@@ -27,6 +27,13 @@ from aperture import Aperture
 # monitor
 from bunch import BunchTwissAnalysis
 
+# Highest multipole order recognised in a MAD/MAD-X element, for both the
+# k<n>/k<n>s to k<n>l/k<n>sl conversion and the sweep that collects them into
+# the poles/kls/skews arrays. The C++ multp() divides by factorial[pole] from
+# a table of 50 entries, so 49 is the hard ceiling.
+# - nilanjan@fnal.gov 09/10/2026
+MAX_MULTIPOLE_POLE = 19
+
 
 """
 Drift
@@ -336,17 +343,20 @@ class _teapotFactory:
                     if(theta < 0.):
                         tiltAngle = - tiltAngle
 
-            if(params.has_key("k1")):
-                k1 = params["k1"]
-                params["k1l"] = k1*length
-
-            if(params.has_key("k2")):
-                k2 = params["k2"]
-                params["k2l"] = k2*length
-
-            if(params.has_key("k3")):
-                k3 = params["k3"]
-                params["k3l"] = k3*length
+            # Normal and skew multipoles of any order. MAD-X gives kn and kns
+            # as strengths in 1/m^(n+1), while poles/kls/skews want them
+            # integrated, so each is multiplied by the length - which for an
+            # rbend is the arc length converted above, not the chord. kns gets
+            # its own k<n>sl key so that a normal and a skew term of the same
+            # order can both survive. k0/k0s are skipped: the dipole component
+            # of a bend is the theta parameter.
+            # - nilanjan@fnal.gov 09/10/2026
+            for pole in xrange(1, MAX_MULTIPOLE_POLE + 1):
+                kn = "k" + str(pole)
+                if(params.has_key(kn)):
+                    params[kn + "l"] = params[kn]*length
+                if(params.has_key(kn + "s")):
+                    params[kn + "sl"] = params[kn + "s"]*length
 		# ===========QUAD quadrupole element =====================
         if(madElem.getType().lower()  == "quad" or \
 			 madElem.getType().lower()  == "quadrupole"):
@@ -495,7 +505,7 @@ class _teapotFactory:
         poles = []
         kls = []
         skews = []
-        for i in xrange(20):
+        for i in xrange(MAX_MULTIPOLE_POLE + 1):
 			pole = i
 			kl_param = None
 			skew = 0
@@ -507,6 +517,13 @@ class _teapotFactory:
 				poles.append(pole)
 				kls.append(kl_param)
 				skews.append(skew)
+			# A skew term of the same order is a separate entry, so an element
+			# carrying both is not reduced to whichever one was written last.
+			# - nilanjan@fnal.gov 09/10/2026
+			if(params.has_key("k"+str(pole)+"sl")):
+				poles.append(pole)
+				kls.append(params["k"+str(pole)+"sl"])
+				skews.append(1)
         if(len(poles) > 0):
 			elem.addParam("poles",poles)
 			elem.addParam("kls",kls)
