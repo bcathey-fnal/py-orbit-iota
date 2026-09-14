@@ -190,6 +190,23 @@ extern "C"
         return Py_None;
     }
 
+    //Chromatic quadrupole transport, replacing quad1 + quad2 - nilanjan@fnal.gov, 09/13/2026
+    static PyObject* wrap_quadchromatic(PyObject *self, PyObject *args)
+    {
+        PyObject* pyBunch;
+        double length, kq;
+        int useCharge = 1;
+        if(!PyArg_ParseTuple(	args, "Odd|i:quadchromatic",
+                             &pyBunch, &length, &kq, &useCharge))
+        {
+            error("teapotbase - quadchromatic - cannot parse arguments!");
+        }
+        Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object *) pyBunch)->cpp_obj;
+        teapot_base::quadchromatic(cpp_bunch, length, kq, useCharge);
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
     //Quadrupole element 3: non-linear transport due to the longitudinal component of the field
     static PyObject* wrap_quad3(PyObject *self, PyObject *args)
     {
@@ -545,6 +562,7 @@ extern "C"
 			{"quad1",            wrap_quad1,          METH_VARARGS, "Quadrupole element one: linear transport matrix "},
 			{"quad2",            wrap_quad2,          METH_VARARGS, "Quadrupole element two: drift in quadrupole "},
 			{"quad3",            wrap_quad3,          METH_VARARGS, "Quadrupole element one: mon-linear transport of Bz - empty there "},
+			{"quadchromatic",    wrap_quadchromatic,  METH_VARARGS, "Chromatic quadrupole transport, the exact flow of quad1 + quad2 "},
 			{"quadfringeIN",     wrap_quadfringeIN,   METH_VARARGS, "Quadrupole element IN edge"},
 			{"quadfringeOUT",    wrap_quadfringeOUT,  METH_VARARGS, "Quadrupole element OUT edge"},
 			{"wedgerotate",      wrap_wedgerotate,    METH_VARARGS, "Rotates coordinates by e for fringe fields at non-SBEND "},

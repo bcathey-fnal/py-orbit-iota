@@ -49,6 +49,9 @@ namespace teapot_base
     void quad2(Bunch* bunch, double length);
     void quad3(Bunch* bunch, double length, double kq, int useCharge);
 
+    // Chromatic quadrupole body, replacing quad1 + quad2 - nilanjan@fnal.gov, 09/13/2026
+    void quadchromatic(Bunch* bunch, double length, double kq, int useCharge);
+
     void quadfringeIN(Bunch* bunch, double kq, int useCharge);
     void quadfringeOUT(Bunch* bunch, double kq, int useCharge);
 

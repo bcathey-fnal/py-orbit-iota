@@ -935,6 +935,9 @@ class QuadTEAPOT(NodeTEAPOT):
 		self.addParam("skews",[])
 		self.setnParts(2)
 
+		# Added a flag to switch to the chromatic quadrupole map - nilanjan@fnal.gov, 09/13/2026
+		self.chromatictransportflag = False
+
 		def fringeIN(node,paramsDict):
 			usageIN = node.getUsage()		
 			if(not usageIN):
@@ -986,6 +989,25 @@ class QuadTEAPOT(NodeTEAPOT):
 
 		self.setType("quad teapot")
 
+	# Added a flag to switch to the chromatic quadrupole map - nilanjan@fnal.gov, 09/13/2026
+	def setUsageChromaticTransport(self,usage = True):
+		"""
+		Sets the property describing if the body of the quad will be
+		transported with the chromatic quadrupole map, the exact flow
+		of the Hamiltonian quad1 and quad2 integrate by splitting. When
+		it is set, the focusing of each particle is kq/(1 + dE) over
+		every part, the quad1/quad2 splitting is not used, and the
+		transport no longer depends on the number of parts.
+		"""
+		self.chromatictransportflag = usage
+
+	def getUsageChromaticTransport(self):
+		"""
+		Returns the property describing if the body of the quad will be
+		transported with the chromatic quadrupole map.
+		"""
+		return self.chromatictransportflag
+
 	def initialize(self):
 		"""
 		The  Quad Combined Function TEAPOT class implementation
@@ -1026,6 +1048,19 @@ class QuadTEAPOT(NodeTEAPOT):
 		bunch = paramsDict["bunch"] 
 		useCharge = 1
 		if(paramsDict.has_key("useCharge")): useCharge = paramsDict["useCharge"]
+		# The chromatic map replaces quad1 + quad2. The multipole kicks stay
+		# where the splitting puts them, between the parts: a half step, then
+		# (nParts - 2) kicks each followed by a full step, then a final kick
+		# and a half step. - nilanjan@fnal.gov, 09/13/2026
+		if self.chromatictransportflag:
+			if(index > 0):
+				for i in xrange(len(poleArr)):
+					pole = poleArr[i]
+					kl = klArr[i]/(nParts - 1)
+					skew = skewArr[i]
+					TPB.multp(bunch,pole,kl,skew,useCharge)
+			TPB.quadchromatic(bunch,length,kq,useCharge)
+			return
 		if(index == 0):
 			TPB.quad1(bunch,length,kq,useCharge)
 			return

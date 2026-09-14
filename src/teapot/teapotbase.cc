@@ -735,6 +735,130 @@ void quad2(Bunch* bunch, double length)
     }
 }
 
+///////////////////////////////////////////////////////////////////////////
+// NAME
+//   quadchromatic
+//
+// DESCRIPTION
+//   Chromatic quadrupole transport. The Hamiltonian of a quadrupole body is
+//   that of drift() with the quadrupole potential added,
+//
+//     H = (px^2 + py^2) / (2 (1 + dE)) + kq (x^2 - y^2) / 2 + h(dE)
+//
+//   with dE the scaled energy deviation (the "dp_p" of the other routines)
+//   and h(dE) the part of drift() that depends on dE alone. quad1 + quad2,
+//   as QuadTEAPOT lays them out over its parts, integrate it by splitting it
+//   into the on-momentum matrix (quad1) and the momentum dependent part of
+//   the drift (quad2), so the chromatic focusing carries a splitting error
+//   of second order in the step and depends on how many parts the node has.
+//   This routine is the exact flow of the same Hamiltonian instead: for each
+//   particle the focusing strength is kq / (1 + dE), x and px are carried by
+//   the thick quadrupole matrix at that strength, and z by the path length
+//   integrated along the trajectory. It replaces quad1 + quad2, and a
+//   quadrupole without multipoles is transported in one step with no
+//   dependence on the number of parts, as ImpactX ChrQuad and the MAD-X and
+//   Xsuite thick combined-function map do. It is the limit quad1 + quad2
+//   converge to, and for kq = 0 it is drift().
+//
+//   Along the trajectory x'' = -K x, with K = kq / (1 + dE) and
+//   x' = px / (1 + dE). E = x'^2 + K x^2 is conserved and
+//   d(x x')/ds = x'^2 - K x^2, so the integral of x'^2 over the length is
+//   (E L + x x'|_L - x x'|_0) / 2, which needs no division by sqrt(|K|)
+//   and holds for either sign of K; the same goes for y with -K.
+//
+// PARAMETERS
+//   bunch  = reference to the macro-particle bunch
+//   length = length of transport
+//   kq = quadrupole field strength [m^(-2)]
+//   useCharge = 1 to scale kq by the charge of the bunch
+//
+// RETURNS
+//   Nothing
+//
+// - nilanjan@fnal.gov, 09/13/2026
+///////////////////////////////////////////////////////////////////////////
+
+void quadchromatic(Bunch* bunch, double length, double kq, int useCharge)
+{
+    double charge = +1.0;
+    if(useCharge == 1) charge = bunch->getCharge();
+    double kqc = kq * charge;
+
+    // without a gradient the Hamiltonian is the drift's
+    if(kqc == 0.)
+    {
+        drift(bunch, length);
+        return;
+    }
+
+    SyncPart* syncPart = bunch->getSyncPart();
+
+    double v = OrbitConst::c * syncPart->getBeta();
+    if(length > 0.)
+    {
+        syncPart->setTime(syncPart->getTime() + length / v);
+    }
+
+    double gamma2i = 1.0 / (syncPart->getGamma() * syncPart->getGamma());
+    double dp_p_coeff = 1.0 / (syncPart->getMomentum() * syncPart->getBeta());
+    double dp_p, KNL, K, omega, cx, sx, cy, sy;
+    double x0, px0, y0, py0, xp0, yp0, xp1, yp1, intx, inty, phifac;
+
+    //coordinate array [part. index][x,xp,y,yp,z,dE]
+    double** arr = bunch->coordArr();
+
+    for(int i = 0; i < bunch->getSize(); i++)
+    {
+        dp_p = arr[i][5] * dp_p_coeff;
+        KNL  = 1.0 / (1.0 + dp_p);
+        K    = kqc * KNL;
+
+        // cosine-like and sine-like solutions at this particle's strength,
+        // the sine-like one divided by omega; x is focused for K > 0
+        omega = sqrt(fabs(K));
+        if(K > 0.)
+        {
+            cx = cos(omega * length);
+            sx = sin(omega * length) / omega;
+            cy = cosh(omega * length);
+            sy = sinh(omega * length) / omega;
+        }
+        else
+        {
+            cx = cosh(omega * length);
+            sx = sinh(omega * length) / omega;
+            cy = cos(omega * length);
+            sy = sin(omega * length) / omega;
+        }
+
+        x0  = arr[i][0];
+        px0 = arr[i][1];
+        y0  = arr[i][2];
+        py0 = arr[i][3];
+        xp0 = px0 * KNL;
+        yp0 = py0 * KNL;
+
+        // px' = -kq x and py' = kq y, so the momenta are updated without the
+        // factor (1 + dE) that would cancel
+        arr[i][0] = cx * x0 + sx * xp0;
+        arr[i][1] = cx * px0 - kqc * sx * x0;
+        arr[i][2] = cy * y0 + sy * yp0;
+        arr[i][3] = cy * py0 + kqc * sy * y0;
+        xp1 = arr[i][1] * KNL;
+        yp1 = arr[i][3] * KNL;
+
+        // integrals of x'^2 and y'^2 over the length
+        intx = ((xp0 * xp0 + K * x0 * x0) * length +
+                arr[i][0] * xp1 - x0 * xp0) / 2.0;
+        inty = ((yp0 * yp0 - K * y0 * y0) * length +
+                arr[i][2] * yp1 - y0 * yp0) / 2.0;
+
+        // the dE-only part of drift(), and the path length of the trajectory
+        phifac = (dp_p * dp_p * gamma2i / 2.0 * KNL - dp_p * gamma2i) * KNL;
+        arr[i][4] -= length * phifac + (intx + inty) / 2.0;
+    }
+}
+
 ////////////////////////////
 // NAME
 //   quad3
