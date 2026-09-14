@@ -240,6 +240,65 @@ the space-charge field without contributing to it, and drops out of the macrosiz
 `BunchTwissAnalysis` — this is how test particles are done. `LSpaceChargeCalc` (sc1d) and the impedance
 nodes ignore the attribute and use the bunch-wide value.
 
+## TEAPOT transport and the exact maps
+
+The kernels are in `src/teapot/teapotbase.cc`, exported as `orbit.teapot_base.TPB`, and composed per part by
+the node classes in `py/orbit/teapot/teapot.py`.
+
+**Parts.** A `QuadTEAPOT` or `BendTEAPOT` of `nParts` parts is a symmetric leapfrog with step
+`h = L/(nParts - 1)`: part 0 is `h/2` long, the middle parts `h`, the last `h/2` (the nodes' `initialize()`).
+`track()` runs once per part, reading `getActivePartIndex()`, and the thin multipole kicks (`multp`, `kl/(nParts
+- 1)` each) sit at the start of every part but the first. Child nodes attached at `AccNode.BODY` with a part
+index run before that part — the space-charge insertion in `orbit.space_charge.scLatticeModifications` puts
+a solver node at the start of a part once the path since the last one exceeds its minimum length — so the
+parts are also where such nodes go, and `setnParts()` after they are placed leaves them at the wrong part.
+
+**Variables.** Coordinates are `(x, xp, y, yp, z, dE)`: `xp`, `yp` the canonical momenta over the design
+momentum, `z` in m, `dE` in GeV. The kernels work with `dp_p = dE/(p beta)`, the scaled energy deviation,
+which equals the momentum deviation only to first order: the exact momentum over the design one is
+`P = sqrt(1 + 2 dp_p + beta^2 dp_p^2) = 1 + dp_p - dp_p^2/(2 gamma^2) + ...`. `drift()`, `quad1`/`quad2`,
+`bend1`-`bend4` and `quadchromatic()` use `1 + dp_p` (the expanded Hamiltonian of Eq. (8) of Holmes, "Single
+Particle Transport in ORBIT and pyORBIT", 2022); `bendexact()` and `driftexact()` use `P`. For a
+symplecticity check the conjugate pairs are `(x, xp)`, `(y, yp)`, `(z, dp_p)` with the standard `J`, and
+`drift()` is the known-symplectic control to compare the finite-difference floor against.
+
+**The default quadrupole converges with the parts.** `quad1` is the thick matrix at the design momentum
+(plus `z += dp_p L/gamma^2`), `quad2` the momentum-dependent part of the drift; interleaved over the parts
+they integrate `H = (xp^2 + yp^2)/(2 (1 + dp_p)) + kq (x^2 - y^2)/2 + h(dp_p)` with a splitting error of
+second order in `h` in the chromatic focusing. On momentum `quad2` does nothing, so tunes and linear matrices
+do not depend on `nParts` and chromaticity does. **`quad1` at `kq == 0` is wrong**: it falls back on the
+full `drift()`, momentum terms included, and the node then applies `quad2` as well, doubling the chromatic
+drift of every zero-strength quadrupole. Unfixed; at `kq == 0` it should apply `x += L xp`, `y += L yp` and
+the `z` term only. The chromatic map below does not have the bug.
+
+**Two opt-in exact maps**, each a plain attribute set in `__init__` (it survives `AccLattice.initialize()`,
+which does not touch it, but not a node rebuilt from the MAD-X file), and each leaving the default path
+byte-identical when off:
+
+- **`bendexact()`, `4766378`** — `BendTEAPOT.setUsageExactTransport(True)`. The closed-form sector bend
+  with the kinematic square root kept, after ImpactX `ExactCFbend`; replaces `bend1`-`bend4`, and a bend
+  without multipoles no longer depends on `nParts`. The commit message has the derivation and checks.
+- **`quadchromatic()`, `607af13`** — `QuadTEAPOT.setUsageChromaticTransport(True)`. The exact flow of the
+  quadrupole Hamiltonian above, which `quad1` + `quad2` converge to, after ImpactX `ChrQuad` and the MAD-X
+  and Xsuite thick map: per particle `K = kq/(1 + dp_p)`, the thick cos/sin or cosh/sinh matrix at that
+  strength, `px` updated as `C px0 - kq S x0` so no `(1 + dp_p)` is multiplied and divided back out, and `z`
+  by the `dp_p`-only part of `drift()` plus half the integral of `x'^2 + y'^2`, which comes from the
+  invariant `E = x'^2 + K x^2` as `(E L + x x'|_L - x x'|_0)/2` with no division by `sqrt(|K|)`. `kq = 0`
+  calls `drift()`. Replaces `quad1` + `quad2`; fringes are separate and unchanged. Checked on a 0.21 m
+  quadrupole at 2.5 MeV: `nParts` 2 to 1001 agree to 4e-13, the split converges to it by 100.0 per decade
+  of `nParts`, RK4 agrees to 2e-14, symplectic at the floor of `drift()`, and a variant without the path
+  length fails that check by six orders of magnitude.
+
+What the two give on IOTA at 2.5 MeV, with the lattice split at 0.2 m: `dQ/ddelta` equal to ImpactX's
+(`ChrQuad`, `ExactSbend`) and Xsuite's to 3e-5 at any part length, where the defaults were 8% low
+horizontally; the same amplitude detuning, where the default bend has none. The cost is in
+`quadchromatic()`, which evaluates a square root and four trigonometric or hyperbolic functions per particle
+per part: 100 turns of 10 000 particles take 6.6 s against 2.6 s with the split (`bendexact()` adds 0.6 s).
+**Not resolved:** with both maps the second derivative `d2Q/ddelta2` is +66.6, +49.3 against their +75.6,
++56.1, and the split at 0.02 m parts gives the same. The difference is 95% of the first-order chromaticity,
+which is what the `1 + dp_p` of `drift()` and `quadchromatic()` in place of `P` would produce at an energy
+where `gamma` is close to 1; that is not tested.
+
 ## The aperture pipeline
 
 Two independent routes produce aperture nodes, and they are easy to confuse:
