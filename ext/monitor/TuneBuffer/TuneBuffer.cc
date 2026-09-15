@@ -29,6 +29,7 @@ TuneBuffer::TuneBuffer(int window_in): CppPyWrapper(NULL)
     nslots = 0;
     latest = -1;
     turn = 0;
+    close = true;
     maxstep = 0.0;
     double dnan = std::numeric_limits<double>::quiet_NaN();
     for(int p = 0; p < 2; p++)
@@ -200,6 +201,9 @@ void TuneBuffer::trackBunch(Bunch* bunch, bool isfirst)
     float fnan = std::numeric_limits<float>::quiet_NaN();
     double dnan = std::numeric_limits<double>::quiet_NaN();
     int col = -1, prevcol = -1;
+    // At the start of the ring with close off, the count restarts: no step
+    // is added across the turn just tracked and no winding is written for it
+    bool restart = isfirst && !close;
     if(isfirst)
     {
         col = (int) (turn % window);
@@ -235,7 +239,7 @@ void TuneBuffer::trackBunch(Bunch* bunch, bool isfirst)
             std::complex<float> h((float) hd.real(), (float) hd.imag());
             size_t k = (size_t) p*nslots + s;
             std::complex<float> prev = previous[k];
-            if(!std::isnan(prev.real())) // Seen before: add the step
+            if(!std::isnan(prev.real()) && !restart) // Seen before: the step
             {
                 double d = std::arg(std::complex<double>(h)*
                                     std::conj(std::complex<double>(prev)));
@@ -247,7 +251,7 @@ void TuneBuffer::trackBunch(Bunch* bunch, bool isfirst)
             {
                 // Close the turn: the phase accumulated over it less the
                 // direct start-to-start step is a whole number of 2 pi
-                if(prevcol >= 0 && !std::isnan(start[k].real()))
+                if(!restart && prevcol >= 0 && !std::isnan(start[k].real()))
                 {
                     double direct = std::arg(std::complex<double>(h)*
                                     std::conj(std::complex<double>(start[k])));
@@ -268,12 +272,12 @@ void TuneBuffer::trackBunch(Bunch* bunch, bool isfirst)
         {
             std::complex<double> hc(0.0, 0.0);
             for(c = 0; c < NCOORD; c++) hc += cvec[p*NCOORD + c]*mean[c];
-            if(!std::isnan(cprevious[p].real()))
+            if(!std::isnan(cprevious[p].real()) && !restart)
                 cphase[p] += std::arg(hc*std::conj(cprevious[p]));
             cprevious[p] = hc;
             if(isfirst)
             {
-                if(prevcol >= 0 && !std::isnan(cstart[p].real()))
+                if(!restart && prevcol >= 0 && !std::isnan(cstart[p].real()))
                 {
                     double direct = std::arg(hc*std::conj(cstart[p]));
                     double kt = std::floor((cphase[p] - direct)/TWO_PI + 0.5);

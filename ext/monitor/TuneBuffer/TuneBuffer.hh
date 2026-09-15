@@ -12,6 +12,12 @@
 // of each plane from its 2x2 betatron block. The moments are reduced over
 // MPI, so every rank must call trackBunch at every node.
 //
+// The counter need not run on every turn. With setClose(false) the node at
+// the start of the ring restarts the count instead of closing it: the turn
+// just tracked keeps unknown windings and the step across it is not added,
+// so a caller that switches the other nodes off for some turns sets close to
+// whether the turn just tracked was counted.
+//
 // Particles are addressed by the TuneSlot particle attribute, which reset
 // assigns from the bunch index at that moment and which follows a particle
 // through compressions of the bunch. The arrays are laid out as
@@ -43,6 +49,10 @@ class TuneBuffer: public OrbitUtils::CppPyWrapper
         void reset(Bunch* bunch, int window);
         // The tune node's action: count, and record at the start of the ring
         void trackBunch(Bunch* bunch, bool isfirst);
+        // Whether the node at the start of the ring closes the turn just
+        // tracked (true, the default) or restarts the count (false)
+        void setClose(bool close_in) {close = close_in;};
+        bool getClose() {return close;};
 
         // Sizes and counters
         int getNSlots() {return nslots;};
@@ -70,6 +80,7 @@ class TuneBuffer: public OrbitUtils::CppPyWrapper
     private:
         int window, nslots, latest;
         long turn;
+        bool close; // The start of the ring closes the turn, or restarts
         std::vector<float> coords;
         std::vector<signed char> windings;
         std::vector<double> centroid;

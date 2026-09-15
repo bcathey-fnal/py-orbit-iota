@@ -79,7 +79,23 @@ extern "C" {
         return Py_None;
     }
 
+    // setClose(close)
+    static PyObject* TuneBuffer_setClose(PyObject *self, PyObject *args)
+    {
+        TuneBuffer* cpp = (TuneBuffer*) ((pyORBIT_Object*) self)->cpp_obj;
+        int close;
+        if(!PyArg_ParseTuple(args, "i:setClose", &close))
+            ORBIT_MPI_Finalize("monitor.tunebuffer: setClose(close) takes an integer.");
+        cpp->setClose(close != 0);
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
     // The scalars
+    static PyObject* TuneBuffer_getClose(PyObject *self, PyObject *args)
+    {
+        return Py_BuildValue("i", ((TuneBuffer*) ((pyORBIT_Object*) self)->cpp_obj)->getClose() ? 1 : 0);
+    }
     static PyObject* TuneBuffer_nslots(PyObject *self, PyObject *args)
     {
         return Py_BuildValue("i", ((TuneBuffer*) ((pyORBIT_Object*) self)->cpp_obj)->getNSlots());
@@ -140,6 +156,8 @@ extern "C" {
     static PyMethodDef TuneBufferClassMethods[] = {
         {"reset", TuneBuffer_reset, METH_VARARGS, "Assign slots to the bunch's particles and size the arrays. - reset(bunch, window)"},
         {"trackBunch", TuneBuffer_trackBunch, METH_VARARGS, "Count at this position, and record if at the start of the ring. - trackBunch(bunch, isfirst)"},
+        {"setClose", TuneBuffer_setClose, METH_VARARGS, "Whether the start of the ring closes the turn just tracked (1) or restarts the count without windings for it (0). - setClose(close)"},
+        {"getClose", TuneBuffer_getClose, METH_VARARGS, "Whether the start of the ring closes the turn. - getClose()"},
         {"nslots", TuneBuffer_nslots, METH_VARARGS, "Number of slots. - nslots()"},
         {"window", TuneBuffer_window, METH_VARARGS, "Turns held. - window()"},
         {"turn", TuneBuffer_turn, METH_VARARGS, "Turns recorded so far. - turn()"},
