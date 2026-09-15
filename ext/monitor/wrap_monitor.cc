@@ -14,6 +14,7 @@ extern "C" {
         // add the other classes init
         wrap_monitor::initBeamDist(pymodule);
         wrap_monitor::initTuneDetector(pymodule);
+        wrap_monitor::initTuneBuffer(pymodule);
         // wrap_monitor::initSchottky(pymodule);
         // wrap_monitor::initBPM(pymodule);
     }

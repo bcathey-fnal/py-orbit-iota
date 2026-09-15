@@ -28,6 +28,7 @@
 #include "ParticleIdNumber.hh"
 #include "ParticleInitialCoordinates.hh"
 #include "TurnNumberAttributes.hh"
+#include "TuneSlot.hh"
 
 ParticleAttributesFactory::ParticleAttributesFactory()
 {
@@ -66,6 +67,10 @@ ParticleAttributes* ParticleAttributesFactory::getParticleAttributesInstance(
 	
 	if(name == "ParticleIdNumber"){
 		part_atrs = new ParticleIdNumber(bunch);
+	}
+
+	if(name == "TuneSlot"){
+		part_atrs = new TuneSlot(bunch);
 	}
   
 	if(name == "LostParticleAttributes"){
@@ -209,6 +214,7 @@ void ParticleAttributesFactory::getParticleAttributesNames(std::vector<string>& 
 	names.clear();
 	names.push_back("macrosize");
 	names.push_back("ParticleIdNumber");
+	names.push_back("TuneSlot");
 	names.push_back("Amplitudes");
 	names.push_back("Populations");
 	names.push_back("pq_coords");

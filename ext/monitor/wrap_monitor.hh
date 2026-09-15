@@ -6,6 +6,7 @@
 
 #include "wrap_beamdist.hh"
 #include "wrap_tunedetector.hh"
+#include "wrap_tunebuffer.hh"
 // #include "wrap_schottky.hh"
 // #include "wrap_bpm.hh"
 
