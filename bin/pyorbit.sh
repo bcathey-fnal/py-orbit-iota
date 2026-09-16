@@ -9,13 +9,13 @@
 
 if [ ! -n "$1" ]
   then
-    echo "Usage: `basename $0` <name of the python script> <N-CPUs>"
+    echo "Usage: `basename $0` <name of the python script> <N-CPUs> [args...]"
     exit $E_BADARGS
 fi
 
 if [ ! -n "$2" ]
   then
-    echo "Usage: `basename $0` <name of the python script> <N CPUs>"
+    echo "Usage: `basename $0` <name of the python script> <N CPUs> [args...]"
     exit $E_BADARGS
 fi
 
@@ -38,5 +38,13 @@ done
 # Set up environment
 source "$( cd -P "$( dirname "$PYORBIT_SCRIPT" )/.." && pwd )/setupEnvironment.sh"
 
-# Finally run pyorbit
-mpirun -np $2 ${ORBIT_ROOT}/bin/pyORBIT $1 $3 $4
+# Finally run pyorbit. Every argument after the rank count belongs to the
+# script, so they are shifted off and forwarded as "$@": writing $3 $4 here
+# silently dropped the fifth onwards and split any argument holding a space.
+# -nilanjan@fnal.gov 09/16/2026
+PYORBIT_PYSCRIPT="$1"
+PYORBIT_RANKS="$2"
+shift 2
+
+mpirun -np "$PYORBIT_RANKS" "${ORBIT_ROOT}/bin/pyORBIT" \
+       "$PYORBIT_PYSCRIPT" "$@"
