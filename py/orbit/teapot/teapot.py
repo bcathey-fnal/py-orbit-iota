@@ -1110,6 +1110,9 @@ class BendTEAPOT(NodeTEAPOT):
 
 		# Added a flag to switch to the exact sector bend map - nilanjan@fnal.gov, 09/07/2026
 		self.exacttransportflag = False
+
+		# Added a flag to kick with the multipoles of the curved frame - nilanjan@fnal.gov, 09/21/2026
+		self.curvedmultipolesflag = False
 		
 		def fringeIN(node,paramsDict):
 			usageIN = node.getUsage()
@@ -1227,6 +1230,48 @@ class BendTEAPOT(NodeTEAPOT):
 		"""
 		return self.exacttransportflag
 
+	# Added a flag to kick with the multipoles of the curved frame - nilanjan@fnal.gov, 09/21/2026
+	def setUsageCurvedMultipoles(self,usage = True):
+		"""
+		Sets the property describing if the multipoles of the body kick
+		as multipoles of the curved frame of the bend, TPB.multpbend,
+		instead of as straight ones, TPB.multp. The poles and the kls
+		mean the same either way: derivatives of the field on the
+		mid-plane, integrated along the reference orbit. A particle at x
+		travels (1 + x/rho) of arc for each unit of that orbit, so the
+		field kicks by (1 + x/rho) times itself, and off the mid-plane it
+		is completed by Maxwell's equations in curvilinear coordinates.
+		The lowest difference is an octupole k2/(2 rho) brought by a
+		sextupole k2. This is the field PTC integrates in a sector bend
+		with EXACT and ImpactX in its ExactCFbend. The kicks of the
+		fringe fields and of the wedges are left as they are.
+		"""
+		self.curvedmultipolesflag = usage
+
+	def getUsageCurvedMultipoles(self):
+		"""
+		Returns the property describing if the multipoles of the body
+		kick as multipoles of the curved frame of the bend.
+		"""
+		return self.curvedmultipolesflag
+
+	def _multipoleKicks(self, bunch, nParts, useCharge):
+		"""
+		One of the (nParts - 1) thin multipole kicks of the body, straight
+		or in the curved frame. - nilanjan@fnal.gov, 09/21/2026
+		"""
+		poleArr = self.getParam("poles")
+		klArr = self.getParam("kls")
+		skewArr = self.getParam("skews")
+		for i in xrange(len(poleArr)):
+			pole = poleArr[i]
+			kl = klArr[i]/(nParts - 1)
+			skew = skewArr[i]
+			if self.curvedmultipolesflag:
+				TPB.multpbend(bunch,pole,kl,skew,1.0/self.getParam("rho"),useCharge)
+			else:
+				TPB.multp(bunch,pole,kl,skew,useCharge)
+
 	def initialize(self):
 		"""
 		The  Bend Combined Functions TEAPOT class implementation of
@@ -1262,9 +1307,6 @@ class BendTEAPOT(NodeTEAPOT):
 		nParts = self.getnParts()
 		index = self.getActivePartIndex()
 		length = self.getLength(index)
-		poleArr = self.getParam("poles")
-		klArr = self.getParam("kls")
-		skewArr = self.getParam("skews")
 		bunch = paramsDict["bunch"]
 		useCharge = 1
 		if(paramsDict.has_key("useCharge")): useCharge = paramsDict["useCharge"]
@@ -1276,11 +1318,7 @@ class BendTEAPOT(NodeTEAPOT):
 		# - nilanjan@fnal.gov, 09/07/2026
 		if self.exacttransportflag:
 			if(index > 0):
-				for i in xrange(len(poleArr)):
-					pole = poleArr[i]
-					kl = klArr[i]/(nParts - 1)
-					skew = skewArr[i]
-					TPB.multp(bunch,pole,kl,skew,useCharge)
+				self._multipoleKicks(bunch, nParts, useCharge)
 			if(index == 0 or index == (nParts - 1)):
 				TPB.bendexact(bunch, length, theta/2.0)
 			else:
@@ -1295,11 +1333,7 @@ class BendTEAPOT(NodeTEAPOT):
 			if self.nonlineartransportflag:
 				TPB.bend3(bunch, theta/2.0)
 				TPB.bend4(bunch,theta/2.0)
-			for i in xrange(len(poleArr)):
-				pole = poleArr[i]
-				kl = klArr[i]/(nParts - 1)
-				skew = skewArr[i]
-				TPB.multp(bunch,pole,kl,skew,useCharge)
+			self._multipoleKicks(bunch, nParts, useCharge)
 			# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
 			if self.nonlineartransportflag:
 				TPB.bend4(bunch,theta/2.0)
@@ -1313,11 +1347,7 @@ class BendTEAPOT(NodeTEAPOT):
 			if self.nonlineartransportflag:
 				TPB.bend3(bunch, theta/2.0)
 				TPB.bend4(bunch, theta/2.0)
-			for i in xrange(len(poleArr)):
-				pole = poleArr[i]
-				kl = klArr[i]/(nParts - 1)
-				skew = skewArr[i]
-				TPB.multp(bunch,pole,kl,skew,useCharge)
+			self._multipoleKicks(bunch, nParts, useCharge)
 			# Added a flag to switch non-linear transport terms - nilanjan@fnal.gov, 07/20/24
 			if self.nonlineartransportflag:
 				TPB.bend4(bunch, theta/2.0)

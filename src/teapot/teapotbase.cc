@@ -374,6 +374,97 @@ void multp(Bunch* bunch, int pole, double kl, int skew, int useCharge)
 
 ///////////////////////////////////////////////////////////////////////////
 // NAME
+//   multpbend
+//
+// DESCRIPTION
+//   Gives particles the multipole momentum kicks of a multipole which sits
+//   in the curved frame of a sector bend. multp() kicks with the field of a
+//   straight multipole. In a bend of curvature h a particle at x travels
+//   (1 + h x) of arc for every unit of the reference orbit, and the field
+//   which has By = k x^pole/pole! on the mid-plane is completed off it by
+//   Maxwell's equations in curvilinear coordinates and not by the straight
+//   harmonic. The kick per unit reference length is then
+//
+//     dxp = -(1 + h x) By,   dyp = +(1 + h x) Bx
+//
+//   which is the gradient of psi = (1 + h x) As, so that the map is
+//   symplectic, psi obeying (1 + h x) (psi_xx + psi_yy) = h psi_x. With
+//   z = x + i y, n = pole, and psi expanded in h about the straight
+//   multipole, the first order is
+//
+//     normal: psi = k/n! [ Re z^(n+1)/(n+1) + h ( x Re z^(n+1)/(2(n+1))
+//                          + n Re z^(n+2)/(2(n+1)(n+2)) ) ]
+//     skew:   psi = -k/n! [ Im z^(n+1)/(n+1) + h ( x Im z^(n+1)/(2(n+1))
+//                          + Im z^(n+2)/(2(n+2)) ) ]
+//
+//   and the kicks below are minus its gradient, exactly. That is exact in h
+//   on the mid-plane, where the kick is -(1 + h x) k x^n/n!, and through
+//   y^2 off it; what is left out is of order h^2 y^4 and two degrees above
+//   the multipole. It is the field of section 1.5 of the MAD-X user guide,
+//   which PTC integrates in a sector bend with EXACT and ImpactX in its
+//   ExactCFbend. At h = 0 it is multp().
+//
+//   For a sextupole of strength k2 the lowest correction is an octupole
+//   h k2/2 on the mid-plane: a cubic kick of k3/6 + h k2/2 where multp()
+//   gives k3/6. - nilanjan@fnal.gov 09/21/2026
+//
+// PARAMETERS
+//   bunch =  reference to the macro-particle bunch
+//   pole = multipole number
+//   pole = 0 for dipole, pole = 1 for quad, pole = 2 for sextupole, pole = 3 for octupole
+//   kl = strength of the kick integrated along the reference orbit [m^(-pole)]
+//   skew = 0 - normal, 1 - skew
+//   h = curvature of the reference orbit, 1/rho [1/m]
+//
+// RETURNS
+//   Nothing
+//
+///////////////////////////////////////////////////////////////////////////
+
+void multpbend(Bunch* bunch, int pole, double kl, int skew, double h, int useCharge)
+{
+    double charge = +1.0;
+    if(useCharge == 1) charge = bunch->getCharge();
+    double klc = kl * charge;
+    std::complex<double> z, zn, zn1;
+    double kl1, x, straight;
+
+    double** arr = bunch->coordArr();
+
+    kl1 = klc / factorial[pole];
+    // Weights of the z^(pole + 1) term in the plane the mid-plane field
+    // does not kick in, which is where the normal and the skew field differ
+    double wnormal = 0.5 * h * pole / (pole + 1.0);
+    double wskew = 0.5 * h * (pole + 2.0) / (pole + 1.0);
+
+    for(int i = 0; i < bunch->getSize(); i++)
+    {
+        x = arr[i][0];
+        z = std::complex<double>(x, arr[i][2]);
+
+        zn = std::complex<double>(1.0, 0.0);
+        for (int k = 0; k < pole; k++)
+        {
+            zn *= z;
+        }
+        zn1 = zn * z;
+        straight = 1.0 + 0.5 * h * x;
+
+        if(skew)
+        {
+            arr[i][1] += kl1 * (straight * std::imag(zn) + wskew * std::imag(zn1));
+            arr[i][3] += kl1 * (straight * std::real(zn) + 0.5 * h * std::real(zn1));
+        }
+        else
+        {
+            arr[i][1] -= kl1 * (straight * std::real(zn) + 0.5 * h * std::real(zn1));
+            arr[i][3] += kl1 * (straight * std::imag(zn) + wnormal * std::imag(zn1));
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// NAME
 //   multpfringeIN
 //
 // DESCRIPTION

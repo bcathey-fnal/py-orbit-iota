@@ -104,6 +104,24 @@ extern "C"
         return Py_None;
     }
 
+    //Tracking a bunch through a multipole in the curved frame of a bend - nilanjan@fnal.gov 09/21/2026
+    static PyObject* wrap_multpbend(PyObject *self, PyObject *args)
+    {
+        PyObject* pyBunch;
+        int pole, skew;
+        double kl, h;
+        int useCharge = 1;
+        if(!PyArg_ParseTuple(	args, "Oidid|i:multpbend",
+                             &pyBunch, &pole, &kl, &skew, &h, &useCharge))
+        {
+            error("teapotbase - multpbend - cannot parse arguments!");
+        }
+        Bunch* cpp_bunch = (Bunch*) ((pyORBIT_Object *) pyBunch)->cpp_obj;
+        teapot_base::multpbend(cpp_bunch, pole, kl, skew, h, useCharge);
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
     //Tracking a bunch through an IN edge of a multipole
     static PyObject* wrap_multpfringeIN(PyObject *self, PyObject *args)
     {
@@ -556,6 +574,7 @@ extern "C"
 			{"drifti",           wrap_drifti,         METH_VARARGS, "Drifts one macroparticle in the bunch"},
 			{"wrapbunch",        wrap_wrapbunch,      METH_VARARGS, "Tracking a bunch through a wrapbunch routine"},
 			{"multp",            wrap_multp,          METH_VARARGS, "Tracking a bunch through a multipole "},
+			{"multpbend",        wrap_multpbend,      METH_VARARGS, "Tracking a bunch through a multipole in the curved frame of a bend "},
 			{"multpfringeIN",    wrap_multpfringeIN,  METH_VARARGS, "Tracking a bunch through an IN edge of a multipole "},
 			{"multpfringeOUT",   wrap_multpfringeOUT, METH_VARARGS, "Tracking a bunch through an OUT edge of a multipole"},
 			{"kick",             wrap_kick,           METH_VARARGS, "Kicker element: chnges in x-prime, y-prime and dE"},

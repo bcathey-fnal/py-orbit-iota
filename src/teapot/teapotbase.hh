@@ -37,6 +37,7 @@ namespace teapot_base
 
     void multpi(Bunch* bunch, int i, int pole, double kl, int skew, int useCharge);
     void multp(Bunch* bunch, int pole, double kl, int skew, int useCharge);
+    void multpbend(Bunch* bunch, int pole, double kl, int skew, double h, int useCharge);
 
     void multpfringeIN(Bunch* bunch, int pole, double kl, int skew, int useCharge);
     void multpfringeOUT(Bunch* bunch, int pole, double kl, const int skew, int useCharge);

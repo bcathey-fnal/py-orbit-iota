@@ -271,7 +271,7 @@ full `drift()`, momentum terms included, and the node then applies `quad2` as we
 drift of every zero-strength quadrupole. Unfixed; at `kq == 0` it should apply `x += L xp`, `y += L yp` and
 the `z` term only. The chromatic map below does not have the bug.
 
-**Two opt-in exact maps**, each a plain attribute set in `__init__` (it survives `AccLattice.initialize()`,
+**Three opt-in maps**, each a plain attribute set in `__init__` (it survives `AccLattice.initialize()`,
 which does not touch it, but not a node rebuilt from the MAD-X file), and each leaving the default path
 byte-identical when off:
 
@@ -289,7 +289,33 @@ byte-identical when off:
   of `nParts`, RK4 agrees to 2e-14, symplectic at the floor of `drift()`, and a variant without the path
   length fails that check by six orders of magnitude.
 
-What the two give on IOTA at 2.5 MeV, with the lattice split at 0.2 m: `dQ/ddelta` equal to ImpactX's
+- **`multpbend()`** — `BendTEAPOT.setUsageCurvedMultipoles(True)`. The thin multipole kicks of a bend's body
+  in the curved frame of the bend, in place of `multp()`'s straight ones. `poles` and `kls` mean the same
+  either way, derivatives of `By` on the mid-plane integrated along the reference orbit; what changes is the
+  kick. A particle at `x` travels `(1 + h x)` of arc per unit of reference orbit, so the field kicks by
+  `-(1 + h x) By`, `+(1 + h x) Bx`, and off the mid-plane it is completed by Maxwell's equations in
+  curvilinear coordinates, not by the straight harmonic. That kick is minus the gradient of
+  `psi = (1 + h x) As`, which obeys `(1 + h x)(psi_xx + psi_yy) = h psi_x`; expanded in `h` about the
+  straight multipole, with `z = x + i y` and `n = pole`, the first order gives
+  `dxp = -k/n! [(1 + h x/2) Re z^n + h/2 Re z^(n+1)]`,
+  `dyp = +k/n! [(1 + h x/2) Im z^n + h n/(2(n+1)) Im z^(n+1)]` for a normal pole, and for a skew one
+  `dxp = +k/n! [(1 + h x/2) Im z^n + h (n+2)/(2(n+1)) Im z^(n+1)]`,
+  `dyp = +k/n! [(1 + h x/2) Re z^n + h/2 Re z^(n+1)]`. Being a gradient it is symplectic whatever the
+  truncation. It is **exact in `h` on the mid-plane and through `y^2` off it**; what is dropped is
+  `O(h^2 y^4)`, two degrees above the multipole. The lowest new term is an octupole `h k2/2` from a
+  sextupole `k2`: a cubic kick of `k3/6 + h k2/2` where `multp()` gives `k3/6`. This is the field of section
+  1.5 of the MAD-X guide, which PTC integrates in a sector bend with `EXACT` and ImpactX in `ExactCFbend`;
+  `multp()` in a bend is the guide's thin multipole kick, eq. 1.15, which MAD-X's own `MAKETHIN` + `TRACK`
+  applies. It acts on the body kicks in all three branches of `track()` (`_multipoleKicks`), not on
+  `multpfringeIN/OUT` or `wedgebendCF`. Checked at `h` = 1.34 1/m, `k2` = 30, `k3` = -76 on a grid out to
+  `x` = 12 mm, `y` = 6 mm against the Maxwellian field from the recursion `a_(j+1) = -(a_j'' + h a_j'/(1 +
+  h x))`: 3e-16 of the kick on the mid-plane, 1e-5 off it, where `multp()` is 1.6e-2 off; at `h = 0` it is
+  `multp()` to the last bit of a fused multiply-add. On the IOTA Run 5p ring, where the dipoles carry those
+  `k2` and `k3`, the multipoles' share of `dQx/dJx` goes from -22.9 to +38.3 1/m (+37.1 at a 0.025 m step)
+  against ImpactX's +37.2 on the same paraxial drifts and PTC's +40.2 with exact ones, and the two codes'
+  test particles then agree to 1.5 um after a turn at 5.8 mm, from 44.
+
+What the first two give on IOTA at 2.5 MeV, with the lattice split at 0.2 m: `dQ/ddelta` equal to ImpactX's
 (`ChrQuad`, `ExactSbend`) and Xsuite's to 3e-5 at any part length, where the defaults were 8% low
 horizontally; the same amplitude detuning, where the default bend has none. The cost is in
 `quadchromatic()`, which evaluates a square root and four trigonometric or hyperbolic functions per particle
