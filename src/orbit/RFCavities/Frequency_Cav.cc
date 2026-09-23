@@ -108,7 +108,7 @@ void Frequency_Cav::trackBunch(Bunch* bunch)
   
   double x, y, r, rp, d_phi;
   double I0, I1;
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     x  = bunch->x(i);
     y  = bunch->y(i);

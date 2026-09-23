@@ -122,7 +122,7 @@ void Dual_Harmonic_Cav::trackBunch(Bunch* bunch)
   SyncPart* syncPart = bunch->getSyncPart();
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     phase = -ZtoPhi * arr[i][4] * RFHNum ;
 	 dERF  = bunch->getCharge()* RFVoltage * (sin(phase) - sin(RFPhase) - RatioVoltage * ( sin(RFPhase + RatioRFHNum * (phase - RFPhase))  - sin(RFPhase2) ));

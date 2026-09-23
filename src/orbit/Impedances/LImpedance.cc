@@ -157,7 +157,7 @@ void LImpedance::trackBunch(Bunch* bunch)
   double z;
   double phi[bunch->getSize()];
   double** coords = bunch->coordArr();
-  for (int j = 0; j < bunch->getSize(); j++)
+  for(int j = 0, nParts_ = bunch->getSize(); j < nParts_; j++)
   {
     z = bunch->z(j);
     philocal = (z / _length) * 2 * OrbitConst::PI;

@@ -87,7 +87,7 @@ void rotatexy(Bunch* bunch, double anglexy)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         xtemp  = arr[i][0];
         pxtemp = arr[i][1];
@@ -171,7 +171,7 @@ void drift(Bunch* bunch, double length)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
         KNL  = 1.0 / (1.0 + dp_p);
@@ -205,7 +205,7 @@ void wrapbunch(Bunch* bunch, double length)
 	//coordinate array [part. index][x,xp,y,yp,z,dE]
 	double** arr = bunch->coordArr();
 	
-	for(int i = 0; i < bunch->getSize(); i++)
+	for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
 		{
 			if(arr[i][4] < -length/2.0) arr[i][4] += length;
 			if(arr[i][4] > length/2.0) arr[i][4] -= length;
@@ -241,21 +241,21 @@ void kick(Bunch* bunch, double kx, double ky, double kE, int useCharge)
     double** arr = bunch->coordArr();
     if(kxc != 0.)
     {
-        for(int i = 0; i < bunch->getSize(); i++)
+        for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
         {
             arr[i][1] += kxc;
         }
     }
     if(kyc != 0.)
     {
-        for(int i = 0; i < bunch->getSize(); i++)
+        for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
         {
             arr[i][3] += kyc;
         }
     }
     if(kEc != 0.)
     {
-        for(int i = 0; i < bunch->getSize(); i++)
+        for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
         {
             arr[i][5] += kEc;
         }
@@ -347,7 +347,7 @@ void multp(Bunch* bunch, int pole, double kl, int skew, int useCharge)
 
     kl1 = klc / factorial[pole];
     
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         z = std::complex<double>(arr[i][0], arr[i][2]);
 
@@ -437,7 +437,7 @@ void multpbend(Bunch* bunch, int pole, double kl, int skew, double h, int useCha
     double wnormal = 0.5 * h * pole / (pole + 1.0);
     double wskew = 0.5 * h * (pole + 2.0) / (pole + 1.0);
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         x = arr[i][0];
         z = std::complex<double>(x, arr[i][2]);
@@ -520,7 +520,7 @@ void multpfringeIN(Bunch* bunch, int pole, double kl, int skew, int useCharge)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         double x = arr[i][0];
         double y = arr[i][2];
@@ -630,7 +630,7 @@ void multpfringeOUT(Bunch* bunch, int pole, double kl, int skew, int useCharge)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         double x = arr[i][0];
         double y = arr[i][2];
@@ -767,7 +767,7 @@ void quad1(Bunch* bunch, double length, double kq, int useCharge)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p    = arr[i][5] * dp_p_coeff;
         x_init  = arr[i][0];
@@ -812,7 +812,7 @@ void quad2(Bunch* bunch, double length)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
         KNL = 1.0 / (1.0 + dp_p);
@@ -898,7 +898,7 @@ void quadchromatic(Bunch* bunch, double length, double kq, int useCharge)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
         KNL  = 1.0 / (1.0 + dp_p);
@@ -1002,7 +1002,7 @@ void quadfringeIN(Bunch* bunch, double kq, int useCharge)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p    = arr[i][5] * dp_p_coeff;
         KNL     = 1.0 / (1.0 + dp_p);
@@ -1069,7 +1069,7 @@ void quadfringeOUT(Bunch* bunch, double kq, int useCharge)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p    = arr[i][5] * dp_p_coeff;
         KNL     = 1.0 / (1.0 + dp_p);
@@ -1137,7 +1137,7 @@ void wedgerotate(Bunch* bunch, double e, int frinout)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         if(frinout == 0)
         {
@@ -1199,7 +1199,7 @@ void wedgedrift(Bunch* bunch, double e, int inout)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         if(inout == 0)
         {
@@ -1253,7 +1253,7 @@ void wedgebend(Bunch* bunch, double e, int inout, double rho, int nsteps)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         if(inout == 0)
         {
@@ -1333,7 +1333,7 @@ void bend1(Bunch* bunch, double length, double th)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p   = arr[i][5] * dp_p_coeff;
         x_init = arr[i][0];
@@ -1375,7 +1375,7 @@ void bend2(Bunch* bunch, double length)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
         KNL = 1.0 / (1.0 + dp_p);
@@ -1419,7 +1419,7 @@ void bend3(Bunch* bunch, double th)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
         KNL  = 1.0 / (1.0 + dp_p);
@@ -1461,7 +1461,7 @@ void bend4(Bunch* bunch, double th)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
         KNL  = 1.0 / (1.0 + dp_p);
@@ -1518,7 +1518,7 @@ void driftexact(Bunch* bunch, double length)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
 
@@ -1622,7 +1622,7 @@ void bendexact(Bunch* bunch, double length, double th)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
 
@@ -1716,7 +1716,7 @@ void bendfringeIN(Bunch* bunch, double rho)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p    = arr[i][5] * dp_p_coeff;
         KNL  = 1.0 / (1.0 + dp_p);
@@ -1753,7 +1753,7 @@ void bendfringeOUT(Bunch* bunch, double rho)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p    = arr[i][5] * dp_p_coeff;
         KNL  = 1.0 / (1.0 + dp_p);
@@ -1811,7 +1811,7 @@ void soln(Bunch* bunch, double length, double B, int useCharge)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         dp_p = arr[i][5] * dp_p_coeff;
         KNL  = 1.0 / (1.0 + dp_p);
@@ -1888,7 +1888,7 @@ void wedgebendCF(Bunch* bunch, double e, int inout,
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         if(inout == 0)
         {
@@ -1970,7 +1970,7 @@ void RingRF(Bunch* bunch, double ring_length, int harmonic_numb,
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         deltaV = voltage * ( sin(harmonic_numb*Factor*arr[i][4] + phase_s));
         arr[i][5] += coeff * deltaV;
@@ -2012,7 +2012,7 @@ void dipedge(Bunch* bunch, double h, double e1, double fint, double hgap)
     //coordinate array [part. index][x,xp,y,yp,z,dE]
     double** arr = bunch->coordArr();
 
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
         //double dp_p = arr[i][5] * dp_p_coeff;
 

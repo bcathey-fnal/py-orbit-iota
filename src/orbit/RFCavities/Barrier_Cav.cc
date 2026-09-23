@@ -106,7 +106,7 @@ void Barrier_Cav::trackBunch(Bunch* bunch)
   SyncPart* syncPart = bunch->getSyncPart();
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     phase = -ZtoPhi * arr[i][4];
     if(phase < -OrbitConst::PI) phase += 2.0 * OrbitConst::PI;

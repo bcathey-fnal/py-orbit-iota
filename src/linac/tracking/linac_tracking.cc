@@ -86,7 +86,7 @@ namespace linac_tracking
 		//sqrt(fabs(p_z2)) - fabs function is a protection for case when xp and yp are too big for dE
 		//It means the particles are nonphysical and simulations do not make sense 
 		double** arr = bunch->coordArr();
-		for(int i = 0; i < bunch->getSize(); i++)
+		for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
 		{
 			dE = arr[i][5];
 			xp = arr[i][1];
@@ -339,7 +339,7 @@ namespace linac_tracking
 		double** arr = bunch->coordArr();
 		if(kx != 0.)
 		{
-			for(int i = 0; i < bunch->getSize(); i++)
+			for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
 			{
 				dE = arr[i][5];
 				Ekin = Ekin_s+dE;
@@ -351,7 +351,7 @@ namespace linac_tracking
 		}
 		if(ky != 0.)
 		{
-			for(int i = 0; i < bunch->getSize(); i++)
+			for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
 			{
 				dE = arr[i][5];
 				Ekin = Ekin_s+dE;
@@ -363,7 +363,7 @@ namespace linac_tracking
 		}
 		if(kE != 0.)
 		{
-			for(int i = 0; i < bunch->getSize(); i++)
+			for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
 			{
 				arr[i][5] += kE;
 			}

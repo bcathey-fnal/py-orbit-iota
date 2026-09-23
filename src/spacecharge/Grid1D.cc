@@ -258,7 +258,7 @@ void Grid1D::binBunch(Bunch* bunch, int axis_ind)
     ParticleMacroSize* macroSizeAttr =
             (ParticleMacroSize*) bunch->getParticleAttributes("macrosize");
     m_size = 0.;
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
       m_size = macroSizeAttr->macrosize(i);
       binValue(m_size, part_coord_arr[i][axis_ind]);
@@ -267,7 +267,7 @@ void Grid1D::binBunch(Bunch* bunch, int axis_ind)
   else
   {
     m_size = bunch->getMacroSize();
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
       binValue(m_size, part_coord_arr[i][axis_ind]);
     }
@@ -307,7 +307,7 @@ void Grid1D::binBunchSmoothed(Bunch* bunch, int axis_ind)
     ParticleMacroSize* macroSizeAttr =
             (ParticleMacroSize*) bunch->getParticleAttributes("macrosize");
     m_size = 0.;
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
       m_size = macroSizeAttr->macrosize(i);
       binValueSmoothed(m_size, part_coord_arr[i][axis_ind]);
@@ -316,7 +316,7 @@ void Grid1D::binBunchSmoothed(Bunch* bunch, int axis_ind)
   else
   {
     m_size = bunch->getMacroSize();
-    for(int i = 0; i < bunch->getSize(); i++)
+    for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
       binValueSmoothed(m_size, part_coord_arr[i][axis_ind]);
     }
@@ -345,7 +345,7 @@ void Grid1D::binBunchByParticle(Bunch* bunch, int axis_ind)
 	
   bunch->compress();
   double** part_coord_arr = bunch->coordArr();
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     binValue(1.0, part_coord_arr[i][axis_ind]);
   }
@@ -373,7 +373,7 @@ void Grid1D::binBunchSmoothedByParticle(Bunch* bunch, int axis_ind)
 	
   bunch->compress();
   double** part_coord_arr = bunch->coordArr();
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     binValueSmoothed(1.0, part_coord_arr[i][axis_ind]);
   }
@@ -391,7 +391,7 @@ void Grid1D::binBunchMoment(int propindex, Bunch* bunch, double* Moment)
   }
   bunch->compress();
   double** part_coord_arr = bunch->coordArr();
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     property = part_coord_arr[i][propindex];
     binMoment(property, part_coord_arr[i][4], Moment);
@@ -410,7 +410,7 @@ void Grid1D::binBunchSmoothedMoment(int propindex, Bunch* bunch, double* Moment)
   }
   bunch->compress();
   double** part_coord_arr = bunch->coordArr();
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     property = part_coord_arr[i][propindex];
     binMomentSmoothed(property, part_coord_arr[i][4], Moment);

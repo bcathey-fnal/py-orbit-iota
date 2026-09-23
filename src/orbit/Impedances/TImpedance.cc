@@ -258,7 +258,7 @@ void TImpedance::trackBunch(Bunch* bunch)
 
 // Bin the particles
 
-  int n, i;
+  int n, i, nParts_;
   double zmin, zmax;
 
   bunchExtremaCalc->getExtremaZ(bunch, zmin, zmax);
@@ -301,7 +301,7 @@ void TImpedance::trackBunch(Bunch* bunch)
 
     _prepareToKick();
 
-    for(i = 0; i < bunch->getSize(); i++)
+    for(i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
       macrophase = twopi * (part_coord_arr[i][4] - zmin) / _length;
       part_coord_arr[i][1] += _kick(macrophase);
@@ -326,7 +326,7 @@ void TImpedance::trackBunch(Bunch* bunch)
 
     _prepareToKick();
 
-    for(i = 0; i < bunch->getSize(); i++)
+    for(i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
     {
       macrophase = twopi * (part_coord_arr[i][4] - zmin) / _length;
       part_coord_arr[i][3] += _kick(macrophase);

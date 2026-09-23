@@ -54,7 +54,7 @@ void BunchTuneAnalysis::analyzeBunch(Bunch* bunch){
 	}
 	
 	if(bunch->hasParticleAttributes("ParticlePhaseAttributes")){
-		for (int i=0; i < bunch->getSize(); i++)
+		for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
 		{
 			double x = part_coord_arr[i][0];
 			double xp = part_coord_arr[i][1];

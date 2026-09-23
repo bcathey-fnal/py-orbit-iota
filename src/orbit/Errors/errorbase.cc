@@ -58,7 +58,7 @@ void CoordDisplacement(Bunch* bunch,
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][0] += dx;
     arr[i][1] += dxp;
@@ -110,7 +110,7 @@ void StraightRotationXY(Bunch* bunch, double anglexy)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     xtemp  = arr[i][0];
     xptemp = arr[i][1];
@@ -153,7 +153,7 @@ void StraightRotationXSI(Bunch* bunch, double anglexsi, double length)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     xtemp  = arr[i][0];
     xptemp = arr[i][1];
@@ -203,7 +203,7 @@ void StraightRotationXSF(Bunch* bunch, double anglexsf, double length)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     xtemp  = arr[i][0];
     xptemp = arr[i][1];
@@ -253,7 +253,7 @@ void StraightRotationYSI(Bunch* bunch, double angleysi, double length)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     xtemp  = arr[i][0];
     xptemp = arr[i][1];
@@ -303,7 +303,7 @@ void StraightRotationYSF(Bunch* bunch, double angleysf, double length)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     xtemp  = arr[i][0];
     xptemp = arr[i][1];
@@ -342,7 +342,7 @@ void BendFieldI(Bunch* bunch, double drho)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][0] -= drho;
   }
@@ -366,7 +366,7 @@ void BendFieldF(Bunch* bunch, double drho)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][0] += drho;
   }
@@ -394,7 +394,7 @@ void BendDisplacementXI(Bunch* bunch, double anglexi, double disp)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][0] += dx;
     teapot_base::drifti(bunch, i, ds);
@@ -423,7 +423,7 @@ void BendDisplacementXF(Bunch* bunch, double anglexf, double disp)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][0] += dx;
     teapot_base::drifti(bunch, i, ds);
@@ -448,7 +448,7 @@ void BendDisplacementYI(Bunch* bunch, double disp)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][2] -= disp;
   }
@@ -472,7 +472,7 @@ void BendDisplacementYF(Bunch* bunch, double disp)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][2] += disp;
   }
@@ -500,7 +500,7 @@ void BendDisplacementLI(Bunch* bunch, double angleli, double disp)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][0] += dx;
     teapot_base::drifti(bunch, i, ds);
@@ -529,7 +529,7 @@ void BendDisplacementLF(Bunch* bunch, double anglelf, double disp)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][0] += dx;
     teapot_base::drifti(bunch, i, ds);
@@ -625,7 +625,7 @@ void RotationI(Bunch* bunch, double anglei, double rhoi, double theta,
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     v1 = arr[i][1];
     v2 = arr[i][3];
@@ -743,7 +743,7 @@ void RotationF(Bunch* bunch, double anglef, double rhoi, double theta,
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     v1 = arr[i][1];
     v2 = arr[i][3];
@@ -794,7 +794,7 @@ void DipoleKickerOsc(Bunch* bunch, double k,
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     kick = k * sin(ztophi * arr[i][4] + phase);
     arr[i][1] += kick;
@@ -820,7 +820,7 @@ void QuadKicker(Bunch* bunch, double k)
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     arr[i][1] += k * arr[i][0];
     arr[i][3] -= k * arr[i][2];
@@ -849,7 +849,7 @@ void QuadKickerOsc(Bunch* bunch, double k,
   //coordinate array [part. index][x,xp,y,yp,z,dE]
   double** arr = bunch->coordArr();
 
-  for(int i = 0; i < bunch->getSize(); i++)
+  for(int i = 0, nParts_ = bunch->getSize(); i < nParts_; i++)
   {
     kick = k * sin(ztophi * arr[i][4] + phase);
     arr[i][1] += kick * arr[i][0];
