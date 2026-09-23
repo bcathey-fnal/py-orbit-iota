@@ -6,8 +6,18 @@ This is forked from the original [Py-ORBIT repo](https://github.com/PyORBIT-Coll
 3. Electron cooling
 4. Custom diagnostics
 5. Analytical space-charge model for Gaussian beams - copied from Hannes Bartosik's repo [py-orbit](https://github.com/hannes-bartosik/py-orbit)
+6. Optional exact transport maps for the TEAPOT elements: an exact sector bend, a chromatic quadrupole, and the multipole kick of the curved frame of a bend
 
 These features have been very useful in simulating the [Integrable Optics Test Accelerator](https://fast.fnal.gov/)
+
+The three transport maps are opt-in, one flag per node, and leave the default path byte-identical
+when they are off:
+
+```python
+node.setUsageExactTransport(True)      # BendTEAPOT: exact sector bend, kinematic square root kept
+node.setUsageChromaticTransport(True)  # QuadTEAPOT: exact flow of the quadrupole Hamiltonian
+node.setUsageCurvedMultipoles(True)    # BendTEAPOT: body multipoles in the curved frame of the bend
+```
 
 
 # Installation
@@ -147,6 +157,27 @@ The same wrapper is `bin/pyorbit.sh` in the source tree, and `./conda/bootstrap.
 equivalent `pyorbit` into the environment. It is spelt with the `.sh` because macOS filesystems are
 case insensitive, where a plain `bin/pyorbit` and the `bin/pyORBIT` the build produces would be the
 same file.
+
+
+# Checking a build
+
+There is no unit test suite and no CI. `lattice_test.py` above is the de facto regression test: it
+builds a lattice, tracks through it and prints the result, so a build that is wired up correctly
+gets through it and ends with `====STOP===`.
+
+```shell
+source setupEnvironment.sh
+.github/workflows/build.sh        # make clean; make
+.github/workflows/run-tests.sh    # the lattice test on two ranks
+```
+
+Those two scripts are what the removed GitHub workflows called, and they still work by hand from
+the repository root. Note that `build.sh` runs `make` once, which does not produce `bin/pyORBIT` on
+a clean tree — run `make` a second time, as in the build instructions above.
+
+The test asserts nothing, so read its output rather than its exit status; and after the tracking it
+enters a 100000-iteration timing loop that takes a while, which you can interrupt once the numbers
+above it look right.
 
 
 # Directory Structure
