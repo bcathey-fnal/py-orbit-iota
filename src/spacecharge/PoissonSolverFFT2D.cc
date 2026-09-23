@@ -52,11 +52,21 @@ void PoissonSolverFFT2D::init(int xSize, int ySize,
   out_       = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) *xSize2_ * (ySize2_/2+1));
   out_res_   = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) *xSize2_ * (ySize2_/2+1));
 
-	// FFTW_MEASURE or FFTW_ESTIMATE
+	// FFTW_MEASURE, not FFTW_ESTIMATE: the planner times a few transforms
+	// instead of guessing from the size, and keeps the faster one.  A solver
+	// plans once and is then used at every space-charge node of every turn --
+	// the IOTA ring makes several hundred calls a turn -- so the planning is
+	// paid back immediately: 21 ms once at 128x128, against 0.343 ms a solve
+	// down to 0.287.  It is safe here because the plans are built before the
+	// arrays are filled, and MEASURE overwrites them while it works.
+	// FFTW_PATIENT was tried and chose a worse plan than MEASURE at every
+	// size.  The two disagree with ESTIMATE in the last bits of the potential
+	// (6e-16 relative, about 3 ulp), since a different algorithm rounds
+	// differently. - nilanjan@fnal.gov, 09/23/2026
 
-  planForward_greenF_ = fftw_plan_dft_r2c_2d(xSize2_ , ySize2_ , in_,  out_green_, FFTW_ESTIMATE);
-  planForward_        = fftw_plan_dft_r2c_2d(xSize2_ , ySize2_ , in_,  out_,       FFTW_ESTIMATE);
-  planBackward_       = fftw_plan_dft_c2r_2d(xSize2_ , ySize2_ , out_res_, in_res_,FFTW_ESTIMATE);
+  planForward_greenF_ = fftw_plan_dft_r2c_2d(xSize2_ , ySize2_ , in_,  out_green_, FFTW_MEASURE);
+  planForward_        = fftw_plan_dft_r2c_2d(xSize2_ , ySize2_ , in_,  out_,       FFTW_MEASURE);
+  planBackward_       = fftw_plan_dft_c2r_2d(xSize2_ , ySize2_ , out_res_, in_res_,FFTW_MEASURE);
   
   //define FFT of the Green fuction
   _defineGreenF();
