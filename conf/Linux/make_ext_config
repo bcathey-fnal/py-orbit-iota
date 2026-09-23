@@ -3,5 +3,8 @@
 ######################################################################
 
 CXX             =  ${MPI_CPP}
-CXXFLAGS       += -g -fPIC -DUSE_MPI=1
+# -O3 to match conf/Linux/make_root_config: without it the ext/ libraries
+# were built at -O0 while everything in src/ was optimised.
+# -nilanjan@fnal.gov 09/23/2026
+CXXFLAGS       += -g -O3 -fPIC -DUSE_MPI=1
 LINKFLAGS      += -fPIC -shared -Wl,--export-dynamic

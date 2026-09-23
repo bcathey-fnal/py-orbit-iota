@@ -3,7 +3,10 @@
 ######################################################################
 
 CXX             =  ${MPI_CPP}
-CXXFLAGS       += -g -fPIC -DUSE_MPI=1
+# -O3 to match conf/Darwin/make_root_config: without it the ext/ libraries
+# were built at -O0 while everything in src/ was optimised.
+# -nilanjan@fnal.gov 09/23/2026
+CXXFLAGS       += -g -O3 -fPIC -DUSE_MPI=1
 # Symbols left undefined here are the interpreter's own; they are bound when
 # the library is dlopened. -nilanjan@fnal.gov 09/07/2026
 LINKFLAGS      += -fPIC -shared -Wl,-undefined,dynamic_lookup
