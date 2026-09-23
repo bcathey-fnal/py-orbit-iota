@@ -471,9 +471,48 @@ mpi_runs_reliably() {
     return 0
 }
 
+# How the spin check is judged.  mpi_cpu_per_wall reports CPU seconds per wall
+# second times ten, so a job whose ranks all block while one works reads about
+# 10 and one whose ranks poll reads a multiple of that.  Four ranks is enough
+# to tell them apart without asking for more cores than a laptop has, and 25
+# (2.5 CPU seconds per wall second) sits well clear of both sides of the
+# measurement: conda-forge mpich on osx-arm64 gave 61 to 89 by default and 9
+# to 10 with FI_PROVIDER=tcp.
+MPI_SPIN_RANKS=4
+MPI_SPIN_LIMIT=25
+
+ratio_text() { printf '%d.%d' $(( $1 / 10 )) $(( $1 % 10 )); }
+
 MPI_RUNTIME_ENV=""
 if mpi_runs_reliably "$MPI_CPP_RESOLVED"; then
     info "MPI verified: $MPI_CPP_RESOLVED (two ranks, no extra settings)"
+    # Completing is not the same as completing cheaply.  The probe above only
+    # asks whether a job returns; a libfabric provider that polls instead of
+    # blocking returns just as promptly and then burns a core for every rank
+    # that is waiting.  That costs nothing on two ranks with nothing to wait
+    # for and a great deal on eight ranks reducing a charge grid at every
+    # space-charge node, which is what a real run does.  So measure where the
+    # time goes and take a provider that stops spinning, when one is offered.
+    # - nilanjan@fnal.gov 09/23/2026
+    MPI_CPU_RATIO="$(mpi_cpu_per_wall "$MPI_CPP_RESOLVED" "$MPI_SPIN_RANKS" || true)"
+    if [ -n "$MPI_CPU_RATIO" ] && [ "$MPI_CPU_RATIO" -gt "$MPI_SPIN_LIMIT" ]; then
+        info "the default provider spends $(ratio_text "$MPI_CPU_RATIO") CPU seconds
+    per wall second on $MPI_SPIN_RANKS ranks, so it is polling rather than
+    blocking; looking for one that does not"
+        for candidate in FI_PROVIDER=tcp FI_PROVIDER=udp; do
+            cand_ratio="$(mpi_cpu_per_wall "$MPI_CPP_RESOLVED" "$MPI_SPIN_RANKS" "$candidate" || true)"
+            [ -n "$cand_ratio" ] || continue
+            if [ "$cand_ratio" -lt "$MPI_CPU_RATIO" ] && mpi_runs_reliably "$MPI_CPP_RESOLVED" "$candidate"; then
+                MPI_RUNTIME_ENV="$candidate"
+                info "MPI runtime setting: $candidate, $(ratio_text "$cand_ratio") CPU
+    seconds per wall second against $(ratio_text "$MPI_CPU_RATIO") by default"
+                break
+            fi
+        done
+        [ -n "$MPI_RUNTIME_ENV" ] || warn "no libfabric provider polled less than the
+    default. Jobs will still be correct, but expect them to scale poorly over
+    several ranks."
+    fi
 else
     warn "a two-rank job built with $MPI_CPP_RESOLVED does not reliably complete;
     trying other libfabric providers"
@@ -522,7 +561,8 @@ mkdir -p "$PREFIX/etc/pyorbit"
     for kv in $MPI_WRAPPER_ENV; do echo "export $kv"; done
     if [ -n "$MPI_RUNTIME_ENV" ]; then
         echo "# Chosen by the bootstrap: with the default libfabric provider a"
-        echo "# two-rank job did not return from MPI_Finalize."
+        echo "# two-rank job either did not return from MPI_Finalize or waited"
+        echo "# by polling, which costs a core per waiting rank."
         echo "export ${MPI_RUNTIME_ENV}"
     fi
 } > "$PREFIX/etc/pyorbit/build.env"

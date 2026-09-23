@@ -197,6 +197,74 @@ probe_mpi_runs() {
     rm -rf "$d"; return $rc
 }
 
+# The collective probe, which runs after the one above rather than replacing
+# it.  It reduces a grid-sized buffer many times over, as a real turn does:
+# SpaceChargeCalc2p5D reduces its whole charge grid once per solver node, so a
+# run makes hundreds of these per turn.
+_mpi_collective_source() {
+    cat <<'EOF'
+#include <mpi.h>
+#include <cstdio>
+#include <cstdlib>
+int main(int argc, char** argv) {
+    int rank, size, n = 128*128, reps = 400;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    double* in  = (double*) malloc(sizeof(double)*n);
+    double* out = (double*) malloc(sizeof(double)*n);
+    if(in == NULL || out == NULL) { MPI_Finalize(); return 2; }
+    for(int i = 0; i < n; i++) in[i] = rank + i*1e-6;
+    MPI_Barrier(MPI_COMM_WORLD);
+    for(int r = 0; r < reps; r++)
+        MPI_Allreduce(in, out, n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Finalize();
+    free(in); free(out);
+    if(rank == 0) std::puts("mpi collective ok");
+    return 0;
+}
+EOF
+}
+
+# mpi_cpu_per_wall <mpicxx> <ranks> [VAR=VALUE ...]
+# Runs the collective probe and prints the CPU time it burned divided by the
+# wall time it took, scaled by 10 so that the shell can compare it as an
+# integer.  Prints nothing and fails if the job will not run.
+#
+# This is what separates a provider that blocks from one that spins.  Both
+# finish, and the probe is short enough that on a quiet machine both finish
+# quickly, so wall time alone does not tell them apart; it is also thrown off
+# by anything that stalls a single rank, since the others then spin while they
+# wait for it.  What is steady is where the time goes: waiting in a blocking
+# provider costs no CPU, while polling one costs a core per waiting rank.
+# Measured here with conda-forge mpich on osx-arm64, four ranks: the default
+# provider gives 5.9 to 8.9, FI_PROVIDER=tcp gives 0.9 to 1.0.
+#
+# On macOS the first run of a new binary under the default provider can raise
+# an application firewall prompt, because it opens a listening socket that
+# FI_PROVIDER=tcp does not.  While the dialog is up the other ranks spin, so
+# that one run reports a wildly inflated time; the ratio still lands on the
+# right side of the threshold, but do not read the absolute numbers from it.
+mpi_cpu_per_wall() {
+    local mpicxx="$1" ranks="$2"; shift 2
+    local d rc t
+    have_cmd "$mpicxx" || return 1
+    have_cmd mpirun || return 1
+    d=$(mktemp -d) || return 1
+    _mpi_collective_source > "$d/c.cc"
+    if ! "$mpicxx" "$d/c.cc" -o "$d/c" >/dev/null 2>&1; then rm -rf "$d"; return 1; fi
+    # Ask the shell for the times of the whole job; `time -p` reports the
+    # children's CPU, which is every rank's.
+    t=$( { run_with_timeout 120 env "$@" \
+             /usr/bin/time -p mpirun -np "$ranks" "$d/c" >/dev/null; } 2>&1 )
+    rc=$?
+    rm -rf "$d"
+    [ "$rc" = 0 ] || return 1
+    printf '%s\n' "$t" | awk '
+        /^real/ { r = $2 } /^user/ { u = $2 } /^sys/ { s = $2 }
+        END { if (r <= 0) r = 0.001; printf "%d", 10*(u+s)/r }'
+}
+
 # probe_fftw <cc> [extra flags...]: double-precision fftw3, which is the only
 # precision pyORBIT uses.
 probe_fftw() {

@@ -83,6 +83,19 @@ Three more things worth knowing before debugging a conda build:
   a freshly created environment. The bootstrap runs a real two-rank job three times and records a
   working `FI_PROVIDER` in `build.env` if it needs one. It only *warns* when nothing works: a
   sandbox that refuses to launch MPI says nothing about whether the build is sound.
+- The same provider has a second, quieter failure: it *finishes* but waits by polling, so every
+  rank blocked in a collective burns a core. Nothing hangs and a short job can look normal, which
+  is why the completion probe above passed it. It shows up as system time and as reverse scaling —
+  on the IOTA ring at 128x128, four ranks went from 1351 ms/turn by default to 604 ms/turn with
+  `FI_PROVIDER=tcp`, and eight ranks were worse than one.
+  `SpaceChargeCalc2p5D` reduces its whole charge grid once per solver node, several hundred times
+  a turn, so this is the collective that matters. The bootstrap now also measures CPU seconds per
+  wall second over a grid-sized `MPI_Allreduce` (`mpi_cpu_per_wall` in `conda/common.sh`) and
+  prefers a provider that stops spinning: a blocking one reads about 1, a polling one several
+  times that. Wall time alone will not tell them apart: the probe is short enough to finish before
+  the difference shows, and anything that stalls one rank — on macOS, the application firewall
+  asking about the listener the default provider opens and `tcp` does not — leaves the others
+  spinning and inflates both clocks.
 
 ### Every shell
 
